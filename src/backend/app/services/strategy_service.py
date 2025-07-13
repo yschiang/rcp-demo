@@ -12,6 +12,7 @@ from ..core.models.wafer_map import WaferMap
 from ..core.models.die import Die
 from ..core.plugins.registry import plugin_registry
 from ..core.plugins.rules import RulePluginFactory
+from ..core.database.repository import get_database_repository
 
 
 class StrategyService:
@@ -19,9 +20,22 @@ class StrategyService:
     
     def __init__(self, 
                  repository=None,
-                 compiler=None):
+                 compiler=None,
+                 use_database=True):
         # Use dependency injection in production
-        self.repository = repository or InMemoryStrategyRepository()
+        if repository is None:
+            if use_database:
+                try:
+                    self.repository = get_database_repository()
+                except Exception as e:
+                    # Fallback to in-memory if database fails
+                    print(f"Database initialization failed, using in-memory storage: {e}")
+                    self.repository = InMemoryStrategyRepository()
+            else:
+                self.repository = InMemoryStrategyRepository()
+        else:
+            self.repository = repository
+            
         self.manager = StrategyManager(self.repository)
         
         # Initialize plugin system and rule factory

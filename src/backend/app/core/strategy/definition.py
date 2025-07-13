@@ -133,9 +133,53 @@ class StrategyDefinition:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'StrategyDefinition':
         """Deserialize from dictionary."""
-        # Implementation for creating StrategyDefinition from dict
-        # This will include proper type conversion and validation
-        pass
+        from datetime import datetime
+        
+        # Parse rules
+        rules = []
+        for rule_data in data.get('rules', []):
+            conditions = None
+            if rule_data.get('conditions'):
+                conditions = ConditionalLogic(**rule_data['conditions'])
+            
+            rule = RuleConfig(
+                rule_type=rule_data['rule_type'],
+                parameters=rule_data.get('parameters', {}),
+                weight=rule_data.get('weight', 1.0),
+                conditions=conditions,
+                enabled=rule_data.get('enabled', True)
+            )
+            rules.append(rule)
+        
+        # Parse conditions
+        conditions = None
+        if data.get('conditions'):
+            conditions = ConditionalLogic(**data['conditions'])
+        
+        # Parse transformations
+        transformations = None
+        if data.get('transformations'):
+            transformations = TransformationConfig(**data['transformations'])
+        
+        return cls(
+            id=data['id'],
+            name=data['name'],
+            description=data['description'],
+            strategy_type=StrategyType(data['strategy_type']),
+            process_step=data['process_step'],
+            tool_type=data['tool_type'],
+            rules=rules,
+            conditions=conditions,
+            transformations=transformations,
+            target_vendor=data.get('target_vendor'),
+            vendor_specific_params=data.get('vendor_specific_params', {}),
+            version=data['version'],
+            author=data['author'],
+            created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00')) if isinstance(data['created_at'], str) else data['created_at'],
+            modified_at=datetime.fromisoformat(data['modified_at'].replace('Z', '+00:00')) if isinstance(data['modified_at'], str) else data['modified_at'],
+            lifecycle_state=StrategyLifecycle(data['lifecycle_state']),
+            schema_version=data['schema_version']
+        )
     
     def validate(self, require_rules: bool = True) -> List[str]:
         """Validate strategy definition and return list of errors."""

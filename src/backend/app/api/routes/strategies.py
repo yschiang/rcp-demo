@@ -10,6 +10,10 @@ from ...core.strategy.definition import StrategyDefinition, StrategyType, Strate
 from ...core.strategy.repository import StrategyManager, StrategyRepository
 from ...core.strategy.compilation import StrategyCompiler
 from ...services.strategy_service import StrategyService
+from ...core.models.errors import (
+    StandardErrorResponse, ValidationErrorResponse, NotFoundErrorResponse,
+    create_validation_error, create_not_found_error, create_business_logic_error
+)
 
 
 router = APIRouter(prefix="/api/v1/strategies", tags=["strategies"])
@@ -66,7 +70,6 @@ class StrategyResponse(BaseModel):
 
 
 class SimulationRequest(BaseModel):
-    strategy_id: str
     wafer_map_data: Dict[str, Any]
     process_parameters: Dict[str, Any] = Field(default_factory=dict)
     tool_constraints: Dict[str, Any] = Field(default_factory=dict)
@@ -89,7 +92,7 @@ def get_strategy_service() -> StrategyService:
     return _strategy_service
 
 
-@router.post("/", response_model=StrategyResponse)
+@router.post("/", response_model=StrategyResponse, responses={400: {"model": ValidationErrorResponse}})
 async def create_strategy(
     request: StrategyCreateRequest,
     service: StrategyService = Depends(get_strategy_service)
@@ -105,8 +108,12 @@ async def create_strategy(
             author=request.author
         )
         return StrategyResponse.from_definition(definition)
+    except ValueError as e:
+        error_response = create_validation_error(str(e))
+        raise HTTPException(status_code=400, detail=error_response.dict())
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        error_response = create_business_logic_error(f"Strategy creation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=error_response.dict())
 
 
 @router.get("/", response_model=List[StrategyResponse])
@@ -133,7 +140,7 @@ async def list_strategies(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{strategy_id}", response_model=Dict[str, Any])
+@router.get("/{strategy_id}", response_model=Dict[str, Any], responses={404: {"model": NotFoundErrorResponse}})
 async def get_strategy(
     strategy_id: str,
     version: Optional[str] = Query(None),
@@ -143,16 +150,18 @@ async def get_strategy(
     try:
         definition = service.get_strategy(strategy_id, version)
         if definition is None:
-            raise HTTPException(status_code=404, detail="Strategy not found")
+            error_response = create_not_found_error("Strategy", strategy_id)
+            raise HTTPException(status_code=404, detail=error_response.dict())
         
         return definition.to_dict()
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        error_response = create_business_logic_error(f"Failed to retrieve strategy: {str(e)}")
+        raise HTTPException(status_code=500, detail=error_response.dict())
 
 
-@router.put("/{strategy_id}", response_model=StrategyResponse)
+@router.put("/{strategy_id}", response_model=StrategyResponse, responses={404: {"model": NotFoundErrorResponse}, 400: {"model": ValidationErrorResponse}})
 async def update_strategy(
     strategy_id: str,
     request: StrategyUpdateRequest,
@@ -162,13 +171,18 @@ async def update_strategy(
     try:
         definition = service.update_strategy(strategy_id, request.dict(exclude_unset=True))
         if definition is None:
-            raise HTTPException(status_code=404, detail="Strategy not found")
+            error_response = create_not_found_error("Strategy", strategy_id)
+            raise HTTPException(status_code=404, detail=error_response.dict())
         
         return StrategyResponse.from_definition(definition)
     except HTTPException:
         raise
+    except ValueError as e:
+        error_response = create_validation_error(str(e))
+        raise HTTPException(status_code=400, detail=error_response.dict())
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        error_response = create_business_logic_error(f"Strategy update failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=error_response.dict())
 
 
 @router.post("/{strategy_id}/clone", response_model=StrategyResponse)
@@ -210,7 +224,7 @@ async def promote_strategy(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/{strategy_id}/simulate", response_model=SimulationResult)
+@router.post("/{strategy_id}/simulate", response_model=SimulationResult, responses={404: {"model": NotFoundErrorResponse}, 400: {"model": ValidationErrorResponse}})
 async def simulate_strategy(
     strategy_id: str,
     request: SimulationRequest,
@@ -219,15 +233,24 @@ async def simulate_strategy(
     """Simulate strategy execution and return results."""
     try:
         result = service.simulate_strategy(
-            strategy_id=request.strategy_id,
+            strategy_id=strategy_id,  # Use path parameter instead of request body
             wafer_map_data=request.wafer_map_data,
             process_parameters=request.process_parameters,
             tool_constraints=request.tool_constraints
         )
         
         return SimulationResult(**result)
+    except ValueError as e:
+        # Handle strategy not found or validation errors
+        if "not found" in str(e).lower():
+            error_response = create_not_found_error("Strategy", strategy_id)
+            raise HTTPException(status_code=404, detail=error_response.dict())
+        else:
+            error_response = create_validation_error(str(e))
+            raise HTTPException(status_code=400, detail=error_response.dict())
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        error_response = create_business_logic_error(f"Simulation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=error_response.dict())
 
 
 @router.get("/{strategy_id}/versions")

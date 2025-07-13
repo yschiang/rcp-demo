@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import StrategyBuilder from './pages/StrategyBuilder'
+import StrategyList from './pages/StrategyList'
 
 function App() {
   return (
@@ -20,8 +21,11 @@ function App() {
 
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <Routes>
+            <Route path="/strategies" element={<StrategyList />} />
             <Route path="/strategy-builder" element={<StrategyBuilder />} />
-            <Route path="/" element={<Navigate to="/strategy-builder" replace />} />
+            <Route path="/strategies/:id" element={<div>Strategy Detail (TODO)</div>} />
+            <Route path="/strategies/:id/edit" element={<div>Strategy Edit (TODO)</div>} />
+            <Route path="/" element={<Navigate to="/strategies" replace />} />
           </Routes>
         </main>
       </div>

@@ -9,6 +9,7 @@ import { ButtonSpinner } from '../ui/LoadingSpinner';
 
 // Step components
 import BasicInfoStep from './steps/BasicInfoStep';
+import SchematicUploadStep from './steps/SchematicUploadStep';
 import RulesConfigStep from './steps/RulesConfigStep';
 import ConditionsStep from './steps/ConditionsStep';
 import TransformationsStep from './steps/TransformationsStep';
@@ -32,27 +33,34 @@ const WIZARD_STEPS: StepConfig[] = [
   },
   {
     id: 2,
+    title: 'Schematic Upload',
+    description: 'Upload schematic files for die layout (optional)',
+    component: SchematicUploadStep,
+    required: false
+  },
+  {
+    id: 3,
     title: 'Rules Configuration',
     description: 'Define sampling rules and parameters',
     component: RulesConfigStep,
     required: true
   },
   {
-    id: 3,
+    id: 4,
     title: 'Conditions',
     description: 'Set conditional logic and constraints',
     component: ConditionsStep,
     required: false
   },
   {
-    id: 4,
+    id: 5,
     title: 'Transformations',
     description: 'Configure coordinate transformations',
     component: TransformationsStep,
     required: false
   },
   {
-    id: 5,
+    id: 6,
     title: 'Preview & Validate',
     description: 'Review and test your strategy',
     component: PreviewStep,
@@ -97,17 +105,21 @@ export default function StrategyWizard() {
         setCanProceed(hasBasicInfo);
         break;
       
-      case 2: // Rules
+      case 2: // Schematic Upload (optional)
+        setCanProceed(true); // Optional step, always can proceed
+        break;
+      
+      case 3: // Rules
         const hasRules = builderState.form_data.rules && builderState.form_data.rules.length > 0;
         setCanProceed(hasRules);
         break;
       
-      case 3: // Conditions (optional)
-      case 4: // Transformations (optional)
+      case 4: // Conditions (optional)
+      case 5: // Transformations (optional)
         setCanProceed(true);
         break;
       
-      case 5: // Preview
+      case 6: // Preview
         setCanProceed(validateBuilder());
         break;
       

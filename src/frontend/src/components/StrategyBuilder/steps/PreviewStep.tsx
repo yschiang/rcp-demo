@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StrategyFormData, SimulationResult, StrategyType } from '../../../types/strategy';
 import WaferMapVisualization from '../../WaferMap/WaferMapVisualization';
 import { useStrategyStore } from '../../../stores/strategyStore';
+import { useSchematicStore } from '../../../stores/schematicStore';
 
 interface PreviewStepProps {
   formData: Partial<StrategyFormData>;
@@ -11,7 +12,11 @@ interface PreviewStepProps {
 
 export default function PreviewStep({ formData, updateData, validationErrors }: PreviewStepProps) {
   const { runSimulation, createStrategy, simulationResult: storeSimulationResult, simulationLoading, error: storeError, builderState } = useStrategyStore();
+  const { getActiveSchematicForWaferMap, visualizationState } = useSchematicStore();
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
+  
+  // Get the active schematic for overlay
+  const activeSchematic = getActiveSchematicForWaferMap();
 
   const handleRunSimulation = async () => {
     try {
@@ -142,6 +147,19 @@ export default function PreviewStep({ formData, updateData, validationErrors }: 
             <p className="text-sm text-gray-600">{formData.description}</p>
           </div>
         )}
+
+        {/* Schematic Information */}
+        {activeSchematic && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <h4 className="font-medium text-gray-700 mb-2">Schematic</h4>
+            <dl className="space-y-1 text-sm">
+              <div><dt className="inline font-medium">File:</dt> <dd className="inline ml-1">{activeSchematic.filename}</dd></div>
+              <div><dt className="inline font-medium">Format:</dt> <dd className="inline ml-1">{activeSchematic.formatType}</dd></div>
+              <div><dt className="inline font-medium">Dies:</dt> <dd className="inline ml-1">{activeSchematic.dieCount.toLocaleString()}</dd></div>
+              <div><dt className="inline font-medium">Size:</dt> <dd className="inline ml-1">{activeSchematic.waferSize || 'Unknown'}</dd></div>
+            </dl>
+          </div>
+        )}
       </div>
 
       {/* Validation */}
@@ -251,6 +269,8 @@ export default function PreviewStep({ formData, updateData, validationErrors }: 
                   }}
                   selectedPoints={simulationResult.selected_points}
                   interactive={false} // Read-only in preview
+                  schematic={activeSchematic || undefined}
+                  showSchematicOverlay={visualizationState.showOverlay}
                 />
               </div>
             </div>

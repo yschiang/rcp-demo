@@ -4,6 +4,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useStrategyStore } from '../../stores/strategyStore';
 import { Die, WaferMap } from '../../types/strategy';
+import { SchematicPreview } from '../SchematicUpload/FilePreview';
 
 interface WaferMapVisualizationProps {
   waferMap: WaferMap;
@@ -13,6 +14,8 @@ interface WaferMapVisualizationProps {
   className?: string;
   interactive?: boolean;
   showTooltip?: boolean;
+  schematic?: SchematicPreview;
+  showSchematicOverlay?: boolean;
 }
 
 export default function WaferMapVisualization({
@@ -22,7 +25,9 @@ export default function WaferMapVisualization({
   onDieHover,
   className = '',
   interactive = true,
-  showTooltip = true
+  showTooltip = true,
+  schematic,
+  showSchematicOverlay = true
 }: WaferMapVisualizationProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredDie, setHoveredDie] = useState<Die | null>(null);
@@ -231,6 +236,112 @@ export default function WaferMapVisualization({
     });
   };
 
+  const renderSchematicOverlay = () => {
+    if (!schematic || !showSchematicOverlay) return null;
+
+    // Convert schematic layout bounds to SVG coordinates
+    const schematicBounds = schematic.layoutBounds;
+    
+    // Calculate scale factor to fit schematic within wafer bounds
+    // Convert micrometers to die coordinates (approximation)
+    const micrometersPerDie = 10000; // Typical 10mm die size
+    const schematicWidthInDies = schematicBounds.width / micrometersPerDie;
+    const schematicHeightInDies = schematicBounds.height / micrometersPerDie;
+    
+    // Center the schematic on the wafer
+    const centerX = (waferBounds.minX + waferBounds.maxX) / 2;
+    const centerY = (waferBounds.minY + waferBounds.maxY) / 2;
+    
+    const schematicLeft = centerX - schematicWidthInDies / 2;
+    const schematicRight = centerX + schematicWidthInDies / 2;
+    const schematicTop = centerY + schematicHeightInDies / 2;
+    const schematicBottom = centerY - schematicHeightInDies / 2;
+    
+    // Convert to SVG coordinates
+    const svgLeft = MARGIN + (schematicLeft - waferBounds.minX) * scale;
+    const svgRight = MARGIN + (schematicRight - waferBounds.minX) * scale;
+    const svgTop = MARGIN + (waferBounds.maxY - schematicTop) * scale;
+    const svgBottom = MARGIN + (waferBounds.maxY - schematicBottom) * scale;
+    
+    return (
+      <g className="schematic-overlay" opacity="0.6">
+        {/* Schematic boundary rectangle */}
+        <rect
+          x={svgLeft}
+          y={svgTop}
+          width={svgRight - svgLeft}
+          height={svgBottom - svgTop}
+          fill="none"
+          stroke="#7c3aed"
+          strokeWidth="2"
+          strokeDasharray="8,4"
+        />
+        
+        {/* Schematic info label */}
+        <rect
+          x={svgLeft}
+          y={svgTop - 20}
+          width={Math.max(100, (svgRight - svgLeft) / 2)}
+          height="18"
+          fill="#7c3aed"
+          fillOpacity="0.9"
+          rx="3"
+        />
+        <text
+          x={svgLeft + 5}
+          y={svgTop - 6}
+          className="fill-white text-xs font-medium"
+        >
+          {schematic.filename}
+        </text>
+        
+        {/* Die boundary indicators (mock grid) */}
+        {renderSchematicDieGrid(svgLeft, svgTop, svgRight, svgBottom)}
+      </g>
+    );
+  };
+
+  const renderSchematicDieGrid = (left: number, top: number, right: number, bottom: number) => {
+    if (!schematic) return null;
+    
+    const gridElements = [];
+    const gridSpacing = Math.max(5, Math.min(20, (right - left) / 20)); // Adaptive grid spacing
+    
+    // Vertical grid lines
+    for (let x = left; x <= right; x += gridSpacing) {
+      gridElements.push(
+        <line
+          key={`schematic-v-${x}`}
+          x1={x}
+          y1={top}
+          x2={x}
+          y2={bottom}
+          stroke="#a855f7"
+          strokeWidth="0.5"
+          opacity="0.4"
+        />
+      );
+    }
+    
+    // Horizontal grid lines
+    for (let y = top; y <= bottom; y += gridSpacing) {
+      gridElements.push(
+        <line
+          key={`schematic-h-${y}`}
+          x1={left}
+          y1={y}
+          x2={right}
+          y2={y}
+          stroke="#a855f7"
+          strokeWidth="0.5"
+          opacity="0.4"
+        />
+      );
+    }
+    
+    return gridElements;
+  };
+
   return (
     <div className={`relative ${className}`}>
       {/* Controls */}
@@ -255,9 +366,26 @@ export default function WaferMapVisualization({
           />
           <label htmlFor="show-coordinates" className="text-sm text-gray-700">Coordinates</label>
         </div>
+        {schematic && (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="show-schematic"
+              checked={showSchematicOverlay}
+              onChange={() => {}} // TODO: Add state management for schematic overlay
+              className="rounded"
+            />
+            <label htmlFor="show-schematic" className="text-sm text-gray-700">Schematic</label>
+          </div>
+        )}
         <div className="text-xs text-gray-500 pt-2 border-t">
           Zoom: {Math.round(waferMapState.zoom * 100)}%
         </div>
+        {schematic && (
+          <div className="text-xs text-gray-500">
+            Dies: {schematic.dieCount.toLocaleString()}
+          </div>
+        )}
       </div>
 
       {/* SVG Wafer Map */}
@@ -276,6 +404,7 @@ export default function WaferMapVisualization({
         {renderGrid()}
         {renderCoordinateLabels()}
         {renderDies()}
+        {renderSchematicOverlay()}
         
         {/* Wafer outline */}
         <circle
@@ -306,7 +435,7 @@ export default function WaferMapVisualization({
       )}
 
       {/* Legend */}
-      <div className="mt-4 flex items-center gap-6 text-sm">
+      <div className="mt-4 flex items-center gap-6 text-sm flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
           <span>Available</span>
@@ -319,10 +448,16 @@ export default function WaferMapVisualization({
           <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
           <span>Selected</span>
         </div>
+        {schematic && showSchematicOverlay && (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-1 bg-purple-600 rounded" style={{ borderStyle: 'dashed' }}></div>
+            <span>Schematic Boundary</span>
+          </div>
+        )}
       </div>
 
       {/* Statistics */}
-      <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+      <div className={`mt-4 grid gap-4 text-sm ${schematic ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <div className="text-center">
           <div className="font-semibold">{waferMap.dies.length}</div>
           <div className="text-gray-500">Total Dies</div>
@@ -335,6 +470,12 @@ export default function WaferMapVisualization({
           <div className="font-semibold">{selectedPoints.length}</div>
           <div className="text-gray-500">Selected</div>
         </div>
+        {schematic && (
+          <div className="text-center">
+            <div className="font-semibold">{schematic.dieCount.toLocaleString()}</div>
+            <div className="text-gray-500">Schematic Dies</div>
+          </div>
+        )}
       </div>
     </div>
   );

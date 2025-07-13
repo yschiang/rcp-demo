@@ -1,11 +1,6 @@
-import React, { useState } from 'react'
-import StrategyForm from '../components/StrategyForm'
+import React from 'react'
+import StrategyWizard from '../components/StrategyBuilder/StrategyWizard'
 
 export default function StrategyBuilder() {
-  return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Strategy Builder</h2>
-      <StrategyForm />
-    </div>
-  )
+  return <StrategyWizard />
 }

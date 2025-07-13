@@ -129,8 +129,8 @@ export default function WaferMapVisualization({
           y1={MARGIN}
           x2={svgX}
           y2={MARGIN + waferBounds.height * scale}
-          stroke=\"#e5e7eb\"
-          strokeWidth=\"0.5\"
+          stroke="#e5e7eb"
+          strokeWidth="0.5"
         />
       );
     }
@@ -145,13 +145,13 @@ export default function WaferMapVisualization({
           y1={svgY}
           x2={MARGIN + waferBounds.width * scale}
           y2={svgY}
-          stroke=\"#e5e7eb\"
-          strokeWidth=\"0.5\"
+          stroke="#e5e7eb"
+          strokeWidth="0.5"
         />
       );
     }
     
-    return <g className=\"grid\">{lines}</g>;
+    return <g className="grid">{lines}</g>;
   };
 
   const renderCoordinateLabels = () => {
@@ -168,8 +168,8 @@ export default function WaferMapVisualization({
           key={`x${x}`}
           x={svgX}
           y={MARGIN - 10}
-          textAnchor=\"middle\"
-          className=\"fill-gray-500 text-xs\"
+          textAnchor="middle"
+          className="fill-gray-500 text-xs"
         >
           {x}
         </text>
@@ -184,15 +184,15 @@ export default function WaferMapVisualization({
           key={`y${y}`}
           x={MARGIN - 10}
           y={svgY + 4}
-          textAnchor=\"middle\"
-          className=\"fill-gray-500 text-xs\"
+          textAnchor="middle"
+          className="fill-gray-500 text-xs"
         >
           {y}
         </text>
       );
     }
     
-    return <g className=\"coordinates\">{labels}</g>;
+    return <g className="coordinates">{labels}</g>;
   };
 
   const renderDies = () => {
@@ -234,28 +234,28 @@ export default function WaferMapVisualization({
   return (
     <div className={`relative ${className}`}>
       {/* Controls */}
-      <div className=\"absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-3 space-y-2\">
-        <div className=\"flex items-center gap-2\">
+      <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-3 space-y-2">
+        <div className="flex items-center gap-2">
           <input
-            type=\"checkbox\"
-            id=\"show-grid\"
+            type="checkbox"
+            id="show-grid"
             checked={waferMapState.show_grid}
             onChange={() => toggleWaferMapOption('show_grid')}
-            className=\"rounded\"
+            className="rounded"
           />
-          <label htmlFor=\"show-grid\" className=\"text-sm text-gray-700\">Grid</label>
+          <label htmlFor="show-grid" className="text-sm text-gray-700">Grid</label>
         </div>
-        <div className=\"flex items-center gap-2\">
+        <div className="flex items-center gap-2">
           <input
-            type=\"checkbox\"
-            id=\"show-coordinates\"
+            type="checkbox"
+            id="show-coordinates"
             checked={waferMapState.show_coordinates}
             onChange={() => toggleWaferMapOption('show_coordinates')}
-            className=\"rounded\"
+            className="rounded"
           />
-          <label htmlFor=\"show-coordinates\" className=\"text-sm text-gray-700\">Coordinates</label>
+          <label htmlFor="show-coordinates" className="text-sm text-gray-700">Coordinates</label>
         </div>
-        <div className=\"text-xs text-gray-500 pt-2 border-t\">
+        <div className="text-xs text-gray-500 pt-2 border-t">
           Zoom: {Math.round(waferMapState.zoom * 100)}%
         </div>
       </div>
@@ -265,7 +265,7 @@ export default function WaferMapVisualization({
         ref={svgRef}
         width={SVG_SIZE}
         height={SVG_SIZE}
-        className=\"border border-gray-300 rounded-lg bg-white\"
+        className="border border-gray-300 rounded-lg bg-white"
         onWheel={handleWheel}
         onMouseMove={handleMouseMove}
         style={{
@@ -282,18 +282,18 @@ export default function WaferMapVisualization({
           cx={SVG_SIZE / 2}
           cy={SVG_SIZE / 2}
           r={(SVG_SIZE - 2 * MARGIN) / 2}
-          fill=\"none\"
-          stroke=\"#374151\"
-          strokeWidth=\"2\"
-          strokeDasharray=\"5,5\"
-          opacity=\"0.5\"
+          fill="none"
+          stroke="#374151"
+          strokeWidth="2"
+          strokeDasharray="5,5"
+          opacity="0.5"
         />
       </svg>
 
       {/* Tooltip */}
       {hoveredDie && showTooltip && (
         <div
-          className=\"fixed z-50 bg-gray-900 text-white text-xs rounded px-2 py-1 pointer-events-none\"
+          className="fixed z-50 bg-gray-900 text-white text-xs rounded px-2 py-1 pointer-events-none"
           style={{
             left: mousePosition.x + 10,
             top: mousePosition.y - 30
@@ -306,34 +306,34 @@ export default function WaferMapVisualization({
       )}
 
       {/* Legend */}
-      <div className=\"mt-4 flex items-center gap-6 text-sm\">
-        <div className=\"flex items-center gap-2\">
-          <div className=\"w-4 h-4 bg-gray-100 border border-gray-300 rounded\"></div>
+      <div className="mt-4 flex items-center gap-6 text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
           <span>Available</span>
         </div>
-        <div className=\"flex items-center gap-2\">
-          <div className=\"w-4 h-4 bg-red-200 border border-red-300 rounded\"></div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-red-200 border border-red-300 rounded"></div>
           <span>Unavailable</span>
         </div>
-        <div className=\"flex items-center gap-2\">
-          <div className=\"w-4 h-4 bg-blue-500 border border-blue-600 rounded\"></div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-blue-500 border border-blue-600 rounded"></div>
           <span>Selected</span>
         </div>
       </div>
 
       {/* Statistics */}
-      <div className=\"mt-4 grid grid-cols-3 gap-4 text-sm\">
-        <div className=\"text-center\">
-          <div className=\"font-semibold\">{waferMap.dies.length}</div>
-          <div className=\"text-gray-500\">Total Dies</div>
+      <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+        <div className="text-center">
+          <div className="font-semibold">{waferMap.dies.length}</div>
+          <div className="text-gray-500">Total Dies</div>
         </div>
-        <div className=\"text-center\">
-          <div className=\"font-semibold\">{waferMap.dies.filter(d => d.available).length}</div>
-          <div className=\"text-gray-500\">Available</div>
+        <div className="text-center">
+          <div className="font-semibold">{waferMap.dies.filter(d => d.available).length}</div>
+          <div className="text-gray-500">Available</div>
         </div>
-        <div className=\"text-center\">
-          <div className=\"font-semibold\">{selectedPoints.length}</div>
-          <div className=\"text-gray-500\">Selected</div>
+        <div className="text-center">
+          <div className="font-semibold">{selectedPoints.length}</div>
+          <div className="text-gray-500">Selected</div>
         </div>
       </div>
     </div>

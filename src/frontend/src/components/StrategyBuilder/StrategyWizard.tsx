@@ -159,36 +159,36 @@ export default function StrategyWizard() {
   const StepComponent = currentStep?.component;
 
   return (
-    <div className=\"min-h-screen bg-gray-50\">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className=\"bg-white shadow-sm border-b\">
-        <div className=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8\">
-          <div className=\"flex items-center justify-between h-16\">
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
             <div>
-              <h1 className=\"text-xl font-semibold text-gray-900\">
+              <h1 className="text-xl font-semibold text-gray-900">
                 Create New Strategy
               </h1>
-              <p className=\"text-sm text-gray-500\">
+              <p className="text-sm text-gray-500">
                 {currentStep?.description}
               </p>
             </div>
             <button
               onClick={handleCancel}
-              className=\"text-gray-400 hover:text-gray-600\"
+              className="text-gray-400 hover:text-gray-600"
             >
-              <svg className=\"w-6 h-6\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
-                <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth={2} d=\"M6 18L18 6M6 6l12 12\" />
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
       </div>
 
-      <div className=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8\">
-        <div className=\"flex gap-8\">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-8">
           {/* Step Navigation Sidebar */}
-          <div className=\"w-64 flex-shrink-0\">
-            <nav className=\"space-y-2\">
+          <div className="w-64 flex-shrink-0">
+            <nav className="space-y-2">
               {WIZARD_STEPS.map((step, index) => {
                 const isCurrent = step.id === builderState.current_step;
                 const isCompleted = step.id < builderState.current_step;
@@ -211,7 +211,7 @@ export default function StrategyWizard() {
                       }
                     `}
                   >
-                    <div className=\"flex items-center gap-3\">
+                    <div className="flex items-center gap-3">
                       <div className={`
                         w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
                         ${isCurrent 
@@ -224,18 +224,18 @@ export default function StrategyWizard() {
                         }
                       `}>
                         {isCompleted ? (
-                          <svg className=\"w-5 h-5\" fill=\"currentColor\" viewBox=\"0 0 20 20\">
-                            <path fillRule=\"evenodd\" d=\"M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z\" clipRule=\"evenodd\" />
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         ) : (
                           step.id
                         )}
                       </div>
                       <div>
-                        <div className=\"font-medium\">{step.title}</div>
-                        <div className=\"text-xs opacity-75\">{step.description}</div>
+                        <div className="font-medium">{step.title}</div>
+                        <div className="text-xs opacity-75">{step.description}</div>
                         {step.required && (
-                          <div className=\"text-xs text-red-600 mt-1\">Required</div>
+                          <div className="text-xs text-red-600 mt-1">Required</div>
                         )}
                       </div>
                     </div>
@@ -246,16 +246,16 @@ export default function StrategyWizard() {
           </div>
 
           {/* Main Content */}
-          <div className=\"flex-1 min-w-0\">
-            <div className=\"bg-white rounded-lg shadow-sm border p-6\">
+          <div className="flex-1 min-w-0">
+            <div className="bg-white rounded-lg shadow-sm border p-6">
               {/* Step Content */}
-              <div className=\"mb-8\">
-                <div className=\"flex items-center gap-3 mb-6\">
-                  <h2 className=\"text-2xl font-bold text-gray-900\">
+              <div className="mb-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">
                     {currentStep?.title}
                   </h2>
                   {currentStep?.required && (
-                    <span className=\"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800\">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                       Required
                     </span>
                   )}
@@ -271,7 +271,7 @@ export default function StrategyWizard() {
               </div>
 
               {/* Navigation Buttons */}
-              <div className=\"flex items-center justify-between pt-6 border-t\">
+              <div className="flex items-center justify-between pt-6 border-t">
                 <button
                   onClick={handlePrevious}
                   disabled={isFirstStep}
@@ -286,7 +286,7 @@ export default function StrategyWizard() {
                   Previous
                 </button>
 
-                <div className=\"flex gap-3\">
+                <div className="flex gap-3">
                   {isLastStep ? (
                     <button
                       onClick={handleFinish}

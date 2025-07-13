@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StrategyFormData, SimulationResult } from '../../../types/strategy';
+import { StrategyFormData, SimulationResult, StrategyType } from '../../../types/strategy';
 import WaferMapVisualization from '../../WaferMap/WaferMapVisualization';
 import { useStrategyStore } from '../../../stores/strategyStore';
 
@@ -10,38 +10,87 @@ interface PreviewStepProps {
 }
 
 export default function PreviewStep({ formData, updateData, validationErrors }: PreviewStepProps) {
-  const { runSimulation, builderState } = useStrategyStore();
-  const [isRunningSimulation, setIsRunningSimulation] = useState(false);
+  const { runSimulation, createStrategy, simulationResult: storeSimulationResult, simulationLoading, error: storeError, builderState } = useStrategyStore();
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
 
   const handleRunSimulation = async () => {
-    setIsRunningSimulation(true);
     try {
-      // Generate dummy wafer map data for demonstration
-      const dummyWaferMap = {
-        dies: Array.from({ length: 1000 }, (_, i) => ({
-          x: (i % 32) - 16,
-          y: Math.floor(i / 32) - 16,
-          available: Math.random() > 0.1, // 90% of dies are available
-        })),
-        metadata: {
-          wafer_size: '300mm',
-          product_type: 'Logic',
-          lot_id: 'DEMO001',
-        },
-      };
-
-      const result = await runSimulation({
-        strategy_id: 'preview',
-        wafer_map_data: dummyWaferMap,
-      });
+      // First create a temporary strategy for simulation
+      const tempStrategy = await createTempStrategy();
       
-      setSimulationResult(result);
+      // Generate realistic wafer map data based on industry standards
+      const realisticWaferMap = generateRealisticWaferMap();
+
+      // Run simulation with real API integration
+      await runSimulation(tempStrategy.id, realisticWaferMap);
+      
     } catch (error) {
       console.error('Simulation failed:', error);
-    } finally {
-      setIsRunningSimulation(false);
+      // Error handling is managed by the store
     }
+  };
+
+  // Sync store simulation result with local state
+  useEffect(() => {
+    if (storeSimulationResult) {
+      setSimulationResult(storeSimulationResult);
+    }
+  }, [storeSimulationResult]);
+
+  const createTempStrategy = async () => {
+    // Create a temporary strategy for simulation purposes
+    const tempName = `TEMP_${Date.now()}`;
+    
+    return await createStrategy({
+      name: tempName,
+      description: formData.description || '',
+      process_step: formData.process_step || '',
+      tool_type: formData.tool_type || '',
+      strategy_type: formData.strategy_type || StrategyType.CUSTOM,
+      author: formData.author || 'System',
+      rules: formData.rules || [],
+      conditions: formData.conditions,
+      transformations: formData.transformations,
+      target_vendor: formData.target_vendor,
+      vendor_specific_params: formData.vendor_specific_params
+    });
+  };
+
+  const generateRealisticWaferMap = () => {
+    // Generate realistic 300mm wafer with standard die layout
+    const waferRadius = 150; // 300mm wafer
+    const dieSize = 10; // 10mm die size
+    const dies = [];
+    
+    for (let x = -waferRadius; x <= waferRadius; x += dieSize) {
+      for (let y = -waferRadius; y <= waferRadius; y += dieSize) {
+        const distanceFromCenter = Math.sqrt(x * x + y * y);
+        
+        // Only include dies within wafer radius
+        if (distanceFromCenter <= waferRadius) {
+          const isEdgeDie = distanceFromCenter > waferRadius - 20;
+          const defectProbability = isEdgeDie ? 0.15 : 0.05; // Higher defect rate at edges
+          
+          dies.push({
+            x: Math.round(x / dieSize),
+            y: Math.round(y / dieSize),
+            available: Math.random() > defectProbability
+          });
+        }
+      }
+    }
+    
+    return {
+      dies,
+      metadata: {
+        wafer_size: '300mm',
+        product_type: formData.process_step || 'Logic',
+        lot_id: `LOT_${Date.now().toString().slice(-6)}`,
+        die_size: dieSize,
+        total_dies: dies.length,
+        available_dies: dies.filter(d => d.available).length
+      }
+    };
   };
 
   const validateStrategy = () => {
@@ -129,14 +178,14 @@ export default function PreviewStep({ formData, updateData, validationErrors }: 
           <h3 className="text-lg font-medium text-gray-900">Strategy Simulation</h3>
           <button
             onClick={handleRunSimulation}
-            disabled={!isValid || isRunningSimulation}
+            disabled={!isValid || simulationLoading}
             className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md ${
-              isValid && !isRunningSimulation
+              isValid && !simulationLoading
                 ? 'text-white bg-blue-600 hover:bg-blue-700'
                 : 'text-gray-400 bg-gray-200 cursor-not-allowed'
             }`}
           >
-            {isRunningSimulation ? (
+            {simulationLoading ? (
               <>
                 <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -149,6 +198,22 @@ export default function PreviewStep({ formData, updateData, validationErrors }: 
             )}
           </button>
         </div>
+
+        {storeError && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Simulation Error</h3>
+                <p className="mt-1 text-sm text-red-700">{storeError}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {simulationResult ? (
           <div className="space-y-6">
@@ -177,7 +242,7 @@ export default function PreviewStep({ formData, updateData, validationErrors }: 
               <h4 className="font-medium text-gray-700 mb-3">Wafer Map Preview</h4>
               <div className="border border-gray-200 rounded-lg bg-gray-50 p-4">
                 <WaferMapVisualization
-                  waferData={{
+                  waferMap={{
                     dies: simulationResult.selected_points.map(point => ({
                       x: point.x,
                       y: point.y,
@@ -185,7 +250,7 @@ export default function PreviewStep({ formData, updateData, validationErrors }: 
                     })),
                   }}
                   selectedPoints={simulationResult.selected_points}
-                  onPointSelect={() => {}} // Read-only in preview
+                  interactive={false} // Read-only in preview
                 />
               </div>
             </div>

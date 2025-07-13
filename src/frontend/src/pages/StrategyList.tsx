@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStrategyStore } from '../stores/strategyStore';
 import { StrategyLifecycle } from '../types/strategy';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { TableSkeleton } from '../components/ui/LoadingOverlay';
 
 export default function StrategyList() {
   const {
@@ -61,9 +63,11 @@ export default function StrategyList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">Loading strategies...</span>
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-32">
+          <LoadingSpinner size="lg" showLabel label="Loading strategies..." />
+        </div>
+        <TableSkeleton rows={5} columns={6} />
       </div>
     );
   }

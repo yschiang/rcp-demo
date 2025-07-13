@@ -208,3 +208,55 @@ export interface ApiError {
   message: string;
   details?: Record<string, any>;
 }
+
+// Enhanced error types for comprehensive error handling
+export type ErrorSeverity = 'info' | 'warning' | 'error' | 'critical';
+
+export interface BackendValidationError {
+  field: string;
+  code: string;
+  message: string;
+  value?: any;
+}
+
+export interface NetworkError {
+  type: 'network';
+  message: string;
+  isTimeout: boolean;
+  isOffline: boolean;
+}
+
+export interface ServerError {
+  type: 'server';
+  status: number;
+  message: string;
+  details?: Record<string, any>;
+  requestId?: string;
+}
+
+export interface ClientError {
+  type: 'client';
+  status: number;
+  message: string;
+  validationErrors?: BackendValidationError[];
+}
+
+export interface ErrorResponse {
+  error: {
+    message: string;
+    code?: string;
+    details?: Record<string, any>;
+    validation_errors?: BackendValidationError[];
+  };
+  request_id?: string;
+  timestamp?: string;
+}
+
+export type ApplicationError = NetworkError | ServerError | ClientError;
+
+export interface ErrorHandlerConfig {
+  showToast: boolean;
+  logError: boolean;
+  severity: ErrorSeverity;
+  retryable: boolean;
+}

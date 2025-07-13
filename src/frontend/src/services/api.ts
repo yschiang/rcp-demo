@@ -1,7 +1,7 @@
 /**
  * API client for strategy management system.
  */
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import {
   StrategyDefinition,
   StrategyListItem,
@@ -11,11 +11,15 @@ import {
   SimulationRequest,
   SimulationResult,
   ApiResponse,
-  StrategyLifecycle
+  StrategyLifecycle,
+  ApplicationError
 } from '../types/strategy';
+import { handleApiError } from './errorHandler';
+import { showApplicationError } from './toastService';
 
 class ApiClient {
   private client: AxiosInstance;
+  private retryAttempts: Map<string, number> = new Map();
 
   constructor(baseURL: string = 'http://localhost:8000') {
     this.client = axios.create({
@@ -26,14 +30,111 @@ class ApiClient {
       },
     });
 
-    // Response interceptor for error handling
+    this.setupInterceptors();
+  }
+
+  private setupInterceptors(): void {
+    // Request interceptor for adding request metadata
+    this.client.interceptors.request.use(
+      (config) => {
+        // Add request timestamp for timeout tracking
+        (config as any).metadata = { startTime: Date.now() };
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Response interceptor for global error handling
     this.client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        console.error('API Error:', error.response?.data || error.message);
-        return Promise.reject(error);
+      (response) => {
+        // Clear retry attempts on success
+        const requestKey = this.getRequestKey(response.config);
+        this.retryAttempts.delete(requestKey);
+        return response;
+      },
+      async (error: AxiosError) => {
+        const applicationError = handleApiError(error, 'API Request');
+        
+        // Handle retryable errors
+        if (this.shouldRetry(error, applicationError)) {
+          const retryResult = await this.handleRetry(error);
+          if (retryResult) {
+            return retryResult;
+          }
+        }
+
+        // Show toast notification for non-retried errors
+        this.showErrorToast(applicationError, error);
+        
+        return Promise.reject(applicationError);
       }
     );
+  }
+
+  private shouldRetry(axiosError: AxiosError, appError: ApplicationError): boolean {
+    const requestKey = this.getRequestKey(axiosError.config);
+    const attempts = this.retryAttempts.get(requestKey) || 0;
+    const maxRetries = 2;
+    
+    // Don't retry if we've exceeded max attempts
+    if (attempts >= maxRetries) {
+      return false;
+    }
+    
+    // Only retry specific error types
+    return appError.type === 'network' || 
+           (appError.type === 'server' && appError.status >= 500) ||
+           (appError.type === 'client' && appError.status === 429);
+  }
+
+  private async handleRetry(error: AxiosError): Promise<AxiosResponse | null> {
+    const requestKey = this.getRequestKey(error.config);
+    const attempts = this.retryAttempts.get(requestKey) || 0;
+    
+    this.retryAttempts.set(requestKey, attempts + 1);
+    
+    // Exponential backoff: 1s, 2s, 4s
+    const delay = Math.pow(2, attempts) * 1000;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    try {
+      return await this.client.request(error.config!);
+    } catch (retryError) {
+      // If retry fails, continue with normal error handling
+      return null;
+    }
+  }
+
+  private getRequestKey(config: any): string {
+    return `${config?.method?.toUpperCase()}_${config?.url}`;
+  }
+
+  private showErrorToast(error: ApplicationError, axiosError: AxiosError): void {
+    // Don't show toast for certain scenarios
+    if (this.shouldSuppressToast(error, axiosError)) {
+      return;
+    }
+    
+    // Create retry function for retryable errors
+    const retryAction = this.shouldRetry(axiosError, error) 
+      ? () => this.client.request(axiosError.config!)
+      : undefined;
+    
+    showApplicationError(error, retryAction);
+  }
+
+  private shouldSuppressToast(error: ApplicationError, axiosError: AxiosError): boolean {
+    // Suppress toasts for validation endpoints (they handle their own error display)
+    if (axiosError.config?.url?.includes('/validate')) {
+      return true;
+    }
+    
+    // Suppress toasts for 404s on optional resource fetches
+    if (error.type === 'client' && error.status === 404) {
+      return true;
+    }
+    
+    return false;
   }
 
   // Strategy CRUD operations

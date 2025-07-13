@@ -11,9 +11,13 @@ import {
   StrategyBuilderState,
   WaferMapViewState,
   StrategyType,
-  StrategyLifecycle
+  StrategyLifecycle,
+  ApplicationError,
+  BackendValidationError
 } from '../types/strategy';
 import { strategyApi } from '../services/api';
+import { mapValidationErrors } from '../services/errorHandler';
+import { showValidationErrors, showSuccess } from '../services/toastService';
 
 interface StrategyStore {
   // Strategy list state
@@ -40,8 +44,16 @@ interface StrategyStore {
   // Wafer map view state
   waferMapState: WaferMapViewState;
 
+  // Enhanced global loading states
+  globalLoading: boolean;
+  loadingStates: Record<string, boolean>;
+
+  // Enhanced error handling
+  lastError: ApplicationError | null;
+  validationErrors: Record<string, string[]>;
+
   // Actions
-  loadStrategies: (filters?: typeof this.filters) => Promise<void>;
+  loadStrategies: (filters?: { process_step?: string; tool_type?: string; lifecycle_state?: string; }) => Promise<void>;
   loadStrategy: (id: string, version?: string) => Promise<void>;
   createStrategy: (data: StrategyFormData) => Promise<StrategyListItem>;
   updateStrategy: (id: string, data: Partial<StrategyFormData>) => Promise<void>;
@@ -67,8 +79,19 @@ interface StrategyStore {
   toggleWaferMapOption: (option: 'show_grid' | 'show_coordinates') => void;
   
   // Utility actions
-  setFilters: (filters: typeof this.filters) => void;
+  setFilters: (filters: { process_step?: string; tool_type?: string; lifecycle_state?: string; }) => void;
   clearError: () => void;
+
+  // Enhanced loading state actions
+  setGlobalLoading: (loading: boolean) => void;
+  setLoadingState: (key: string, loading: boolean) => void;
+  clearAllLoadingStates: () => void;
+
+  // Enhanced error handling actions
+  setApplicationError: (error: ApplicationError | null) => void;
+  setValidationErrors: (errors: Record<string, string[]>) => void;
+  clearValidationErrors: () => void;
+  handleApiError: (error: ApplicationError, context?: string) => void;
 }
 
 const initialBuilderState: StrategyBuilderState = {
@@ -109,6 +132,10 @@ export const useStrategyStore = create<StrategyStore>()(
       simulationResult: null,
       simulationLoading: false,
       waferMapState: initialWaferMapState,
+      globalLoading: false,
+      loadingStates: {},
+      lastError: null,
+      validationErrors: {},
 
       // Strategy list actions
       loadStrategies: async (filters = {}) => {
@@ -139,7 +166,8 @@ export const useStrategyStore = create<StrategyStore>()(
 
       createStrategy: async (data: StrategyFormData) => {
         set((state) => ({
-          builderState: { ...state.builderState, is_saving: true }
+          builderState: { ...state.builderState, is_saving: true },
+          validationErrors: {}
         }));
         
         try {
@@ -166,18 +194,37 @@ export const useStrategyStore = create<StrategyStore>()(
           // Reload strategies list
           await get().loadStrategies(get().filters);
           
+          // Show success notification
+          showSuccess(`Strategy "${strategy.name}" created successfully!`);
+          
           set((state) => ({
-            builderState: { ...state.builderState, is_saving: false }
+            builderState: { ...state.builderState, is_saving: false },
+            lastError: null
           }));
           
           return strategy;
         } catch (error: any) {
-          const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to create strategy';
-          set((state) => ({
-            error: errorMessage,
-            builderState: { ...state.builderState, is_saving: false }
-          }));
-          throw new Error(errorMessage);
+          get().handleApiError(error, 'Strategy Creation');
+          
+          // Handle validation errors specifically
+          if (error.type === 'client' && error.validationErrors) {
+            const fieldErrors = mapValidationErrors(error.validationErrors);
+            set((state) => ({
+              builderState: { 
+                ...state.builderState, 
+                is_saving: false,
+                validation_errors: fieldErrors
+              },
+              validationErrors: fieldErrors
+            }));
+            showValidationErrors(fieldErrors);
+          } else {
+            set((state) => ({
+              builderState: { ...state.builderState, is_saving: false }
+            }));
+          }
+          
+          throw error;
         }
       },
 
@@ -339,6 +386,48 @@ export const useStrategyStore = create<StrategyStore>()(
 
       clearError: () => {
         set({ error: null });
+      },
+
+      // Enhanced loading state actions
+      setGlobalLoading: (loading: boolean) => {
+        set({ globalLoading: loading });
+      },
+
+      setLoadingState: (key: string, loading: boolean) => {
+        set((state) => ({
+          loadingStates: {
+            ...state.loadingStates,
+            [key]: loading
+          }
+        }));
+      },
+
+      clearAllLoadingStates: () => {
+        set({ loadingStates: {} });
+      },
+
+      // Enhanced error handling actions
+      setApplicationError: (error: ApplicationError | null) => {
+        set({ lastError: error });
+      },
+
+      setValidationErrors: (errors: Record<string, string[]>) => {
+        set({ validationErrors: errors });
+      },
+
+      clearValidationErrors: () => {
+        set({ validationErrors: {} });
+      },
+
+      handleApiError: (error: ApplicationError, context?: string) => {
+        console.error(`${context || 'API'} Error:`, error);
+        set({ lastError: error });
+        
+        // Handle specific error types
+        if (error.type === 'client' && error.validationErrors) {
+          const fieldErrors = mapValidationErrors(error.validationErrors);
+          set({ validationErrors: fieldErrors });
+        }
       }
     }),
     {

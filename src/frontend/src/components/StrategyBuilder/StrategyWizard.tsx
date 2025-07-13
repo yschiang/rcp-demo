@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStrategyStore } from '../../stores/strategyStore';
-import { StrategyType } from '../../types/strategy';
-import toast from 'react-hot-toast';
+import { StrategyType, StrategyFormData } from '../../types/strategy';
+import { ButtonSpinner } from '../ui/LoadingSpinner';
 
 // Step components
 import BasicInfoStep from './steps/BasicInfoStep';
@@ -64,11 +64,13 @@ export default function StrategyWizard() {
   const navigate = useNavigate();
   const {
     builderState,
+    validationErrors,
     setBuilderStep,
     updateBuilderData,
     resetBuilder,
     validateBuilder,
     createStrategy,
+    clearValidationErrors,
     runSimulation
   } = useStrategyStore();
 
@@ -128,30 +130,19 @@ export default function StrategyWizard() {
 
   const handleFinish = async () => {
     if (!validateBuilder()) {
-      toast.error('Please fix validation errors before saving');
       return;
     }
 
+    // Clear any previous validation errors
+    clearValidationErrors();
+
     try {
-      const strategy = await createStrategy(builderState.form_data);
-      toast.success(`Strategy "${strategy.name}" created successfully!`);
+      const strategy = await createStrategy(builderState.form_data as StrategyFormData);
       resetBuilder();
-      navigate('/strategies'); // Navigate to strategy list instead of non-existent detail view
+      navigate('/strategies');
     } catch (error: any) {
+      // Error handling is now managed by the store and API interceptor
       console.error('Strategy creation failed:', error);
-      
-      // Enhanced error handling with specific messages
-      if (error.message) {
-        toast.error(`Failed to create strategy: ${error.message}`);
-      } else if (error.response?.status === 400) {
-        toast.error('Invalid strategy data. Please check your inputs and try again.');
-      } else if (error.response?.status === 409) {
-        toast.error('A strategy with this name already exists. Please choose a different name.');
-      } else if (error.response?.status >= 500) {
-        toast.error('Server error. Please try again later or contact support.');
-      } else {
-        toast.error('Failed to create strategy. Please try again.');
-      }
     }
   };
 
@@ -283,6 +274,37 @@ export default function StrategyWizard() {
                 )}
               </div>
 
+              {/* Validation Errors */}
+              {Object.keys(validationErrors).length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">
+                        Please fix the following errors:
+                      </h3>
+                      <div className="mt-2 text-sm text-red-700">
+                        {Object.entries(validationErrors).map(([field, errors]) => (
+                          <div key={field} className="mb-1">
+                            <strong className="capitalize">{field.replace('_', ' ')}:</strong> {errors.join(', ')}
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={clearValidationErrors}
+                        className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Navigation Buttons */}
               <div className="flex items-center justify-between pt-6 border-t">
                 <button
@@ -313,13 +335,7 @@ export default function StrategyWizard() {
                       `}
                     >
                       {builderState.is_saving ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Creating...
-                        </>
+                        <ButtonSpinner variant="white" label="Creating..." />
                       ) : (
                         'Create Strategy'
                       )}

@@ -1,0 +1,87 @@
+name: Advanced Memory Strategy
+description: Multi-layer sampling with adaptive rules for memory chip production
+process_step: Etch
+tool_type: KLA_2132
+strategy_type: adaptive
+author: Senior Process Engineer
+
+rules:
+  - rule_type: hotspot_priority
+    parameters:
+      hotspot_threshold: 0.8
+      priority_zones: ["center", "edge"]
+      adaptive_density: true
+      min_samples: 10
+      max_samples: 50
+    weight: 0.5
+    enabled: true
+    conditions:
+      wafer_size: "300mm"
+      process_layer: "Metal2"
+  
+  - rule_type: uniform_grid
+    parameters:
+      grid_spacing: 15
+      offset_x: 2.5
+      offset_y: 2.5
+      edge_exclusion: 5.0
+      rotation: 0
+    weight: 0.3
+    enabled: true
+    
+  - rule_type: fixed_point
+    parameters:
+      points: 
+        - [0, 0]     # Center reference
+        - [5, 5]     # Quarter position
+        - [10, 10]   # Edge reference
+        - [-5, -5]   # Opposite quarter
+        - [0, 10]    # Edge center
+        - [10, 0]    # Edge center
+    weight: 0.2
+    enabled: true
+
+conditions:
+  wafer_size: "300mm"
+  product_type: "Memory"
+  process_layer: "Metal2"
+  defect_density_threshold: 0.03
+  temperature_range: [22, 28]  # Celsius
+  custom_conditions:
+    chamber_pressure: 1013.25   # mbar
+    humidity_max: 45           # %RH
+    particle_count_max: 10     # particles/m³
+    process_recipe: "ETCH_M2_v2.1"
+
+transformations:
+  rotation_angle: 45      # degrees
+  scale_factor: 1.2       # magnification
+  offset_x: 0            # mm
+  offset_y: 0            # mm
+  flip_x: false
+  flip_y: true
+  coordinate_system: "center_origin"
+
+target_vendor: "KLA"
+vendor_specific_params:
+  kla_settings:
+    measurement_mode: "high_precision"
+    focus_offset: 0.5      # μm
+    illumination: "darkfield"
+    objective: "50x"
+    wavelength: 633        # nm
+  export_format: "KLA_XML_v2.1"
+  
+metadata:
+  created_date: "2025-07-13"
+  last_modified: "2025-07-13"
+  version: "1.0"
+  comments: "Optimized for memory chip defect detection on Metal2 layer"
+  approval_required: true
+  estimated_runtime: "45 minutes"
+  
+quality_requirements:
+  min_coverage_percentage: 85
+  max_edge_exclusion_mm: 10
+  alignment_score_threshold: 0.9
+  repeatability_requirement: "±0.1μm"

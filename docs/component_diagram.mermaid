@@ -1,0 +1,214 @@
+```mermaid
+graph TB
+    %% User Interface Layer
+    subgraph "Frontend (React/TypeScript)"
+        UI[Strategy Builder UI]
+        WM[Wafer Map Visualization]
+        SU[Schematic Upload]
+        SL[Strategy List]
+        
+        %% Frontend Services
+        subgraph "Frontend Services"
+            API[API Client]
+            ERR[Error Handler]
+            TOAST[Toast Service]
+        end
+        
+        %% State Management
+        subgraph "State Management (Zustand)"
+            SS[Strategy Store]
+            SMS[Schematic Store]
+            WMS[WaferMap Store]
+        end
+    end
+
+    %% API Gateway Layer
+    subgraph "Backend API (FastAPI)"
+        MAIN[Main App]
+        
+        subgraph "API Routes"
+            STR_ROUTES[Strategy Routes]
+            SCH_ROUTES[Schematic Routes]
+            HEALTH[Health Check]
+        end
+        
+        subgraph "Middleware"
+            CORS[CORS Middleware]
+            GZIP[GZip Middleware]
+            TIMING[Timing Middleware]
+        end
+    end
+
+    %% Business Logic Layer
+    subgraph "Services Layer"
+        STR_SVC[Strategy Service]
+        SCH_SVC[Schematic Service]
+        VAL_SVC[Validation Service]
+        SIM_SVC[Simulation Service]
+    end
+
+    %% Core Domain Layer
+    subgraph "Core Domain"
+        %% Strategy Management
+        subgraph "Strategy Core"
+            STR_DEF[Strategy Definition]
+            STR_COMP[Strategy Compiler]
+            STR_REPO[Strategy Repository]
+            STR_MGR[Strategy Manager]
+        end
+        
+        %% Schematic Processing
+        subgraph "Schematic Core"
+            SCH_DATA[Schematic Data]
+            DIE_BOUND[Die Boundary]
+            COORD_SYS[Coordinate System]
+        end
+        
+        %% Plugin Framework
+        subgraph "Plugin System"
+            PLUGIN_REG[Plugin Registry]
+            RULE_FACTORY[Rule Factory]
+            VENDOR_FACTORY[Vendor Factory]
+        end
+    end
+
+    %% Parser Layer
+    subgraph "Parser Framework"
+        PARSER_BASE[Parser Base]
+        GDSII_PARSER[GDSII Parser]
+        DXF_PARSER[DXF Parser]
+        SVG_PARSER[SVG Parser]
+    end
+
+    %% Rule Plugins
+    subgraph "Rule Plugins"
+        FIXED_RULE[Fixed Point Rule]
+        CENTER_RULE[Center Edge Rule]
+        GRID_RULE[Uniform Grid Rule]
+        RANDOM_RULE[Random Sampling Rule]
+    end
+
+    %% Vendor Plugins
+    subgraph "Vendor Mappings"
+        ASML_MAP[ASML Mapping]
+        KLA_MAP[KLA Mapping]
+        VENDOR_BASE[Vendor Base]
+    end
+
+    %% Database Layer
+    subgraph "Data Layer"
+        DB_REPO[Database Repository]
+        SQLITE[(SQLite Database)]
+        MODELS[Data Models]
+    end
+
+    %% Demo Package
+    subgraph "Demo Package"
+        DEMO_SCRIPT[Demo Scripts]
+        DEMO_DATA[Sample Data]
+        DEMO_FILES[Schematic Files]
+        API_EXAMPLES[API Examples]
+    end
+
+    %% External Connections
+    subgraph "External Systems"
+        ASML_TOOL[ASML Tools]
+        KLA_TOOL[KLA Tools]
+        FAB_SYS[Fab Systems]
+    end
+
+    %% Frontend to Backend Connections
+    UI --> API
+    WM --> API
+    SU --> API
+    SL --> API
+    
+    API --> SS
+    API --> SMS
+    API --> WMS
+    
+    ERR --> TOAST
+    API --> ERR
+
+    %% API to Services
+    STR_ROUTES --> STR_SVC
+    SCH_ROUTES --> SCH_SVC
+    MAIN --> CORS
+    MAIN --> GZIP
+    MAIN --> TIMING
+
+    %% Services to Core
+    STR_SVC --> STR_DEF
+    STR_SVC --> STR_COMP
+    STR_SVC --> STR_REPO
+    STR_SVC --> STR_MGR
+    
+    SCH_SVC --> SCH_DATA
+    SCH_SVC --> PARSER_BASE
+    
+    VAL_SVC --> STR_DEF
+    VAL_SVC --> SCH_DATA
+    
+    SIM_SVC --> STR_COMP
+    SIM_SVC --> COORD_SYS
+
+    %% Core Domain Connections
+    STR_COMP --> PLUGIN_REG
+    STR_REPO --> DB_REPO
+    STR_MGR --> STR_REPO
+    
+    PLUGIN_REG --> RULE_FACTORY
+    PLUGIN_REG --> VENDOR_FACTORY
+    
+    RULE_FACTORY --> FIXED_RULE
+    RULE_FACTORY --> CENTER_RULE
+    RULE_FACTORY --> GRID_RULE
+    RULE_FACTORY --> RANDOM_RULE
+    
+    VENDOR_FACTORY --> ASML_MAP
+    VENDOR_FACTORY --> KLA_MAP
+    VENDOR_FACTORY --> VENDOR_BASE
+
+    %% Parser Connections
+    PARSER_BASE --> GDSII_PARSER
+    PARSER_BASE --> DXF_PARSER
+    PARSER_BASE --> SVG_PARSER
+    
+    GDSII_PARSER --> DIE_BOUND
+    DXF_PARSER --> DIE_BOUND
+    SVG_PARSER --> DIE_BOUND
+
+    %% Database Connections
+    DB_REPO --> SQLITE
+    DB_REPO --> MODELS
+    STR_REPO --> DB_REPO
+
+    %% Export Connections
+    ASML_MAP --> ASML_TOOL
+    KLA_MAP --> KLA_TOOL
+    VENDOR_BASE --> FAB_SYS
+
+    %% Demo Package Connections
+    DEMO_SCRIPT --> API
+    DEMO_DATA --> SCH_SVC
+    DEMO_FILES --> PARSER_BASE
+    API_EXAMPLES --> STR_ROUTES
+    API_EXAMPLES --> SCH_ROUTES
+
+    %% Styling
+    classDef frontend fill:#e1f5fe
+    classDef backend fill:#f3e5f5
+    classDef core fill:#e8f5e8
+    classDef plugin fill:#fff3e0
+    classDef database fill:#fce4ec
+    classDef external fill:#f0f4c3
+    classDef demo fill:#e0f2f1
+
+    class UI,WM,SU,SL,API,ERR,TOAST,SS,SMS,WMS frontend
+    class MAIN,STR_ROUTES,SCH_ROUTES,HEALTH,CORS,GZIP,TIMING,STR_SVC,SCH_SVC,VAL_SVC,SIM_SVC backend
+    class STR_DEF,STR_COMP,STR_REPO,STR_MGR,SCH_DATA,DIE_BOUND,COORD_SYS core
+    class PLUGIN_REG,RULE_FACTORY,VENDOR_FACTORY,FIXED_RULE,CENTER_RULE,GRID_RULE,RANDOM_RULE,ASML_MAP,KLA_MAP,VENDOR_BASE,PARSER_BASE,GDSII_PARSER,DXF_PARSER,SVG_PARSER plugin
+    class DB_REPO,SQLITE,MODELS database
+    class ASML_TOOL,KLA_TOOL,FAB_SYS external
+    class DEMO_SCRIPT,DEMO_DATA,DEMO_FILES,API_EXAMPLES demo
+```

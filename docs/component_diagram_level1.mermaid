@@ -1,0 +1,74 @@
+```mermaid
+graph TB
+    %% Level 1: Container Diagram
+    %% Shows major containers/applications and their relationships
+    
+    %% External Users
+    USERS[Fab Engineers<br/>Process Engineers<br/>Tool Operators]
+    
+    %% Main System Containers
+    subgraph "Wafer Sampling Strategy System"
+        
+        %% Frontend Container
+        subgraph "Web Application"
+            WEBAPP[React/TypeScript SPA<br/>Strategy Builder Wizard<br/>Port: 5173]
+        end
+        
+        %% Backend Container  
+        subgraph "API Application"
+            API[FastAPI Backend<br/>REST API & Business Logic<br/>Port: 8000]
+        end
+        
+        %% Database Container
+        subgraph "Data Store"
+            DB[(SQLite Database<br/>Strategy Persistence<br/>Auto-created)]
+        end
+        
+        %% Demo Container
+        subgraph "Demo Package"
+            DEMO[Demo Scripts & Samples<br/>Automated Testing<br/>Sample Data]
+        end
+    end
+    
+    %% External Systems
+    ASML_SYS[ASML Tool Control<br/>JSON Interface]
+    KLA_SYS[KLA Tool Control<br/>XML Interface]
+    FILE_SYS[File System<br/>Schematic Storage]
+    
+    %% User Interactions
+    USERS -->|HTTPS<br/>Web Browser| WEBAPP
+    
+    %% Internal Communications
+    WEBAPP -->|HTTP/JSON<br/>REST API Calls| API
+    API -->|SQL Queries<br/>CRUD Operations| DB
+    DEMO -->|HTTP<br/>Test Requests| API
+    
+    %% External Integrations
+    API -->|HTTPS<br/>JSON Export| ASML_SYS
+    API -->|HTTPS<br/>XML Export| KLA_SYS
+    API -->|File I/O<br/>Read Schematics| FILE_SYS
+    
+    %% Data Flows
+    FILE_SYS -->|GDSII/DXF/SVG<br/>Upload| API
+    
+    %% Container Details
+    WEBAPP -.->|Technology Stack<br/>• React 18<br/>• TypeScript<br/>• Zustand<br/>• Tailwind CSS| WEBAPP
+    API -.->|Technology Stack<br/>• FastAPI<br/>• Python 3.10<br/>• Pydantic<br/>• SQLAlchemy| API
+    DB -.->|Technology Stack<br/>• SQLite 3<br/>• Auto-migration<br/>• Repository Pattern| DB
+    DEMO -.->|Components<br/>• Automation Scripts<br/>• Sample Files<br/>• API Examples<br/>• Test Cases| DEMO
+    
+    %% Styling
+    classDef webapp fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef api fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef database fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef demo fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef external fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef user fill:#f0f4c3,stroke:#689f38,stroke-width:2px
+    
+    class WEBAPP webapp
+    class API api
+    class DB database
+    class DEMO demo
+    class ASML_SYS,KLA_SYS,FILE_SYS external
+    class USERS user
+```

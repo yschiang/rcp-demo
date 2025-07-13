@@ -1,0 +1,44 @@
+```mermaid
+graph TB
+    %% Level 0: System Context Diagram
+    %% Shows the system boundary and external actors
+    
+    subgraph "Wafer Sampling Strategy System"
+        WSSS[Wafer Sampling Strategy System<br/>Phase 2 Demo Ready]
+    end
+    
+    %% External Actors
+    ENGINEER[Fab Engineer<br/>Strategy Creator]
+    REVIEWER[Process Engineer<br/>Strategy Reviewer]  
+    OPERATOR[Tool Operator<br/>Strategy Deployer]
+    
+    %% External Systems
+    ASML[ASML Lithography Tools<br/>PAS5500 Series]
+    KLA[KLA Inspection Tools<br/>2132 Series]
+    MES[Manufacturing Execution System<br/>Fab Control]
+    FILESTORE[File Storage<br/>Schematic Repository]
+    
+    %% User Interactions
+    ENGINEER -->|Creates & Edits Strategies| WSSS
+    REVIEWER -->|Reviews & Approves| WSSS
+    OPERATOR -->|Deploys to Tools| WSSS
+    
+    %% System Interactions
+    WSSS -->|JSON Output| ASML
+    WSSS -->|XML Output| KLA
+    WSSS -->|Status Updates| MES
+    WSSS -->|Reads Schematics| FILESTORE
+    
+    %% Data Flows
+    FILESTORE -->|GDSII/DXF/SVG Files| WSSS
+    MES -->|Process Parameters| WSSS
+    
+    %% Styling
+    classDef system fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    classDef user fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef external fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    
+    class WSSS system
+    class ENGINEER,REVIEWER,OPERATOR user
+    class ASML,KLA,MES,FILESTORE external
+```

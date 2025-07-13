@@ -1,0 +1,198 @@
+```mermaid
+graph TB
+    %% Level 2: Component Diagram - Detailed Internal Architecture
+    %% Shows internal components and their relationships
+    
+    %% Frontend Components
+    subgraph "Frontend Application (React/TypeScript)"
+        
+        subgraph "UI Components"
+            WIZARD[Strategy Wizard<br/>6-Step Process]
+            WAFERMAP[Wafer Map<br/>Interactive SVG]
+            UPLOAD[Schematic Upload<br/>Drag & Drop]
+            STRATLIST[Strategy List<br/>Management UI]
+        end
+        
+        subgraph "State Management"
+            STRAT_STORE[Strategy Store<br/>Zustand]
+            SCHEM_STORE[Schematic Store<br/>Zustand]
+            UI_STORE[UI State Store<br/>Zustand]
+        end
+        
+        subgraph "Frontend Services"
+            API_CLIENT[API Client<br/>Axios + Interceptors]
+            ERROR_HANDLER[Error Handler<br/>Toast Notifications]
+            FORM_VALIDATOR[Form Validator<br/>Zod Schemas]
+        end
+    end
+    
+    %% Backend API Components
+    subgraph "Backend API (FastAPI)"
+        
+        subgraph "API Layer"
+            MAIN_APP[FastAPI App<br/>Main Entry Point]
+            STRAT_ROUTES[Strategy Routes<br/>/api/v1/strategies]
+            SCHEM_ROUTES[Schematic Routes<br/>/api/v1/schematics]
+            MIDDLEWARE[Middleware<br/>CORS, Auth, Logging]
+        end
+        
+        subgraph "Service Layer"
+            STRAT_SERVICE[Strategy Service<br/>Business Logic]
+            SCHEM_SERVICE[Schematic Service<br/>File Processing]
+            VALIDATION_SERVICE[Validation Service<br/>Rule Checking]
+            SIMULATION_SERVICE[Simulation Service<br/>Coverage Analysis]
+        end
+    end
+    
+    %% Core Domain Components
+    subgraph "Core Domain Layer"
+        
+        subgraph "Strategy Domain"
+            STRAT_DEF[Strategy Definition<br/>Domain Model]
+            STRAT_COMPILER[Strategy Compiler<br/>Rule Resolution]
+            STRAT_REPO[Strategy Repository<br/>Data Access]
+            LIFECYCLE_MGR[Lifecycle Manager<br/>State Transitions]
+        end
+        
+        subgraph "Schematic Domain"
+            SCHEM_DATA[Schematic Data<br/>Domain Model]
+            DIE_BOUNDARY[Die Boundary<br/>Geometry Model]
+            COORD_SYSTEM[Coordinate System<br/>Transformation Model]
+        end
+        
+        subgraph "Plugin Framework"
+            PLUGIN_REGISTRY[Plugin Registry<br/>Component Discovery]
+            RULE_FACTORY[Rule Factory<br/>Rule Instantiation]
+            VENDOR_FACTORY[Vendor Factory<br/>Output Generation]
+        end
+    end
+    
+    %% Parser Components
+    subgraph "Parser Framework"
+        PARSER_INTERFACE[Parser Interface<br/>Abstract Base]
+        GDSII_PARSER[GDSII Parser<br/>Binary Format]
+        DXF_PARSER[DXF Parser<br/>CAD Format]
+        SVG_PARSER[SVG Parser<br/>Web Format]
+        FORMAT_DETECTOR[Format Detector<br/>Auto-detection]
+    end
+    
+    %% Rule Plugin Components
+    subgraph "Rule Plugins"
+        FIXED_POINT[Fixed Point Rule<br/>Coordinate Based]
+        CENTER_EDGE[Center Edge Rule<br/>Margin Based]
+        UNIFORM_GRID[Uniform Grid Rule<br/>Pattern Based]
+        RANDOM_SAMPLE[Random Sample Rule<br/>Statistical]
+        ADAPTIVE_RULE[Adaptive Rule<br/>ML Based]
+    end
+    
+    %% Vendor Plugin Components
+    subgraph "Vendor Mappings"
+        VENDOR_INTERFACE[Vendor Interface<br/>Abstract Base]
+        ASML_MAPPING[ASML Mapping<br/>JSON Output]
+        KLA_MAPPING[KLA Mapping<br/>XML Output]
+        GENERIC_MAPPING[Generic Mapping<br/>CSV Output]
+    end
+    
+    %% Database Components
+    subgraph "Data Access Layer"
+        DB_INTERFACE[Repository Interface<br/>Abstract Base]
+        SQLITE_REPO[SQLite Repository<br/>Implementation]
+        DATA_MODELS[Data Models<br/>SQLAlchemy]
+        MIGRATION_MGR[Migration Manager<br/>Schema Updates]
+    end
+    
+    %% Demo Components
+    subgraph "Demo & Testing"
+        DEMO_RUNNER[Demo Runner<br/>Automation Script]
+        SAMPLE_DATA[Sample Data<br/>Test Fixtures]
+        API_EXAMPLES[API Examples<br/>Usage Samples]
+        TEST_CASES[Test Cases<br/>Validation Specs]
+    end
+    
+    %% Frontend Internal Connections
+    WIZARD --> STRAT_STORE
+    WAFERMAP --> SCHEM_STORE
+    UPLOAD --> API_CLIENT
+    STRATLIST --> STRAT_STORE
+    
+    API_CLIENT --> ERROR_HANDLER
+    WIZARD --> FORM_VALIDATOR
+    
+    %% Frontend to Backend
+    API_CLIENT -->|HTTP/JSON| STRAT_ROUTES
+    API_CLIENT -->|HTTP/JSON| SCHEM_ROUTES
+    
+    %% Backend API Internal
+    MAIN_APP --> MIDDLEWARE
+    STRAT_ROUTES --> STRAT_SERVICE
+    SCHEM_ROUTES --> SCHEM_SERVICE
+    
+    %% Service to Domain
+    STRAT_SERVICE --> STRAT_DEF
+    STRAT_SERVICE --> STRAT_COMPILER
+    STRAT_SERVICE --> STRAT_REPO
+    
+    SCHEM_SERVICE --> SCHEM_DATA
+    SCHEM_SERVICE --> FORMAT_DETECTOR
+    
+    VALIDATION_SERVICE --> STRAT_DEF
+    VALIDATION_SERVICE --> SCHEM_DATA
+    
+    SIMULATION_SERVICE --> STRAT_COMPILER
+    SIMULATION_SERVICE --> COORD_SYSTEM
+    
+    %% Domain Internal
+    STRAT_COMPILER --> PLUGIN_REGISTRY
+    STRAT_REPO --> DB_INTERFACE
+    LIFECYCLE_MGR --> STRAT_REPO
+    
+    %% Plugin System
+    PLUGIN_REGISTRY --> RULE_FACTORY
+    PLUGIN_REGISTRY --> VENDOR_FACTORY
+    
+    RULE_FACTORY --> FIXED_POINT
+    RULE_FACTORY --> CENTER_EDGE
+    RULE_FACTORY --> UNIFORM_GRID
+    RULE_FACTORY --> RANDOM_SAMPLE
+    RULE_FACTORY --> ADAPTIVE_RULE
+    
+    VENDOR_FACTORY --> ASML_MAPPING
+    VENDOR_FACTORY --> KLA_MAPPING
+    VENDOR_FACTORY --> GENERIC_MAPPING
+    
+    %% Parser System
+    FORMAT_DETECTOR --> PARSER_INTERFACE
+    PARSER_INTERFACE --> GDSII_PARSER
+    PARSER_INTERFACE --> DXF_PARSER
+    PARSER_INTERFACE --> SVG_PARSER
+    
+    GDSII_PARSER --> DIE_BOUNDARY
+    DXF_PARSER --> DIE_BOUNDARY
+    SVG_PARSER --> DIE_BOUNDARY
+    
+    %% Database System
+    DB_INTERFACE --> SQLITE_REPO
+    SQLITE_REPO --> DATA_MODELS
+    SQLITE_REPO --> MIGRATION_MGR
+    
+    %% Demo System
+    DEMO_RUNNER --> API_CLIENT
+    SAMPLE_DATA --> SCHEM_SERVICE
+    API_EXAMPLES --> STRAT_ROUTES
+    TEST_CASES --> VALIDATION_SERVICE
+    
+    %% Styling
+    classDef frontend fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef domain fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef plugin fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef data fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef demo fill:#f0f4c3,stroke:#689f38,stroke-width:2px
+    
+    class WIZARD,WAFERMAP,UPLOAD,STRATLIST,STRAT_STORE,SCHEM_STORE,UI_STORE,API_CLIENT,ERROR_HANDLER,FORM_VALIDATOR frontend
+    class MAIN_APP,STRAT_ROUTES,SCHEM_ROUTES,MIDDLEWARE,STRAT_SERVICE,SCHEM_SERVICE,VALIDATION_SERVICE,SIMULATION_SERVICE backend
+    class STRAT_DEF,STRAT_COMPILER,STRAT_REPO,LIFECYCLE_MGR,SCHEM_DATA,DIE_BOUNDARY,COORD_SYSTEM domain
+    class PLUGIN_REGISTRY,RULE_FACTORY,VENDOR_FACTORY,FIXED_POINT,CENTER_EDGE,UNIFORM_GRID,RANDOM_SAMPLE,ADAPTIVE_RULE,VENDOR_INTERFACE,ASML_MAPPING,KLA_MAPPING,GENERIC_MAPPING,PARSER_INTERFACE,GDSII_PARSER,DXF_PARSER,SVG_PARSER,FORMAT_DETECTOR plugin
+    class DB_INTERFACE,SQLITE_REPO,DATA_MODELS,MIGRATION_MGR data
+    class DEMO_RUNNER,SAMPLE_DATA,API_EXAMPLES,TEST_CASES demo
+```

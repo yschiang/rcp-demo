@@ -1,0 +1,373 @@
+{
+  "test_cases": [
+    {
+      "id": "TC001",
+      "name": "Simple SVG Upload and Parse",
+      "description": "Upload simple 3x3 SVG wafer layout and verify parsing",
+      "type": "schematic_upload",
+      "input": {
+        "file": "demo/schematics/simple_wafer_layout.svg",
+        "format": "SVG",
+        "expected_dies": 9
+      },
+      "expected_results": {
+        "upload_success": true,
+        "die_count": 9,
+        "format_detected": "SVG",
+        "coordinate_system": "svg_units",
+        "parse_time_max_seconds": 5
+      },
+      "validation_criteria": [
+        "File uploads without errors",
+        "Correct die count detected",
+        "Layout bounds calculated correctly",
+        "Die IDs extracted from text elements"
+      ]
+    },
+    {
+      "id": "TC002", 
+      "name": "Complex SVG with Edge Dies",
+      "description": "Upload complex 7x7 SVG with edge dies and validate parsing",
+      "type": "schematic_upload",
+      "input": {
+        "file": "demo/schematics/complex_wafer_layout.svg",
+        "format": "SVG",
+        "expected_dies": 53
+      },
+      "expected_results": {
+        "upload_success": true,
+        "die_count": 53,
+        "available_dies": 49,
+        "unavailable_dies": 4,
+        "wafer_size_estimate": "400mm_equivalent"
+      },
+      "validation_criteria": [
+        "All 49 available dies detected",
+        "4 edge dies marked as unavailable",
+        "Center die (404) highlighted correctly",
+        "Legend and measurement markers ignored"
+      ]
+    },
+    {
+      "id": "TC003",
+      "name": "DXF CAD File Processing", 
+      "description": "Upload DXF format CAD file and extract die boundaries",
+      "type": "schematic_upload",
+      "input": {
+        "file": "demo/schematics/processor_die.dxf",
+        "format": "DXF",
+        "target_layer": "DIE_BOUNDARY"
+      },
+      "expected_results": {
+        "upload_success": true,
+        "die_count": 4,
+        "format_detected": "DXF",
+        "layers_detected": ["0", "DIE_BOUNDARY", "METAL1"],
+        "entities_processed": ["LWPOLYLINE", "TEXT", "CIRCLE"]
+      },
+      "validation_criteria": [
+        "DXF format correctly identified",
+        "Die boundary layer extracted",
+        "Text labels parsed for die IDs",
+        "Coordinate system properly handled"
+      ]
+    },
+    {
+      "id": "TC004",
+      "name": "Multi-Rule Strategy Creation",
+      "description": "Create strategy with multiple rule types and validate",
+      "type": "strategy_creation",
+      "input": {
+        "name": "Test Multi-Rule Strategy",
+        "rules": [
+          {
+            "rule_type": "fixed_point",
+            "parameters": {"points": [[0,0], [1,1], [2,2]]},
+            "weight": 0.4
+          },
+          {
+            "rule_type": "center_edge", 
+            "parameters": {"edge_margin": 5},
+            "weight": 0.3
+          },
+          {
+            "rule_type": "uniform_grid",
+            "parameters": {"grid_spacing": 10},
+            "weight": 0.3
+          }
+        ]
+      },
+      "expected_results": {
+        "creation_success": true,
+        "rule_count": 3,
+        "total_weight": 1.0,
+        "lifecycle_state": "draft",
+        "validation_passed": true
+      },
+      "validation_criteria": [
+        "All three rules configured correctly",
+        "Rule weights sum to 1.0",
+        "Strategy saved to database",
+        "Lifecycle state set to draft"
+      ]
+    },
+    {
+      "id": "TC005",
+      "name": "Strategy-Schematic Validation",
+      "description": "Validate strategy against uploaded schematic layout",
+      "type": "validation",
+      "input": {
+        "strategy_id": "created_in_tc004",
+        "schematic_id": "created_in_tc001",
+        "validation_mode": "strict"
+      },
+      "expected_results": {
+        "validation_status": "passed",
+        "alignment_score_min": 0.8,
+        "coverage_percentage_min": 50,
+        "conflicts_max": 0,
+        "warnings_max": 2
+      },
+      "validation_criteria": [
+        "High alignment score (>0.8)",
+        "Reasonable coverage percentage",
+        "No critical conflicts detected",
+        "Warnings provide actionable feedback"
+      ]
+    },
+    {
+      "id": "TC006",
+      "name": "Strategy Simulation",
+      "description": "Run simulation and verify coverage statistics",
+      "type": "simulation",
+      "input": {
+        "strategy_id": "created_in_tc004",
+        "wafer_map": {
+          "dies": [
+            {"x": 0, "y": 0, "available": true},
+            {"x": 1, "y": 0, "available": true},
+            {"x": 2, "y": 0, "available": true},
+            {"x": 0, "y": 1, "available": true},
+            {"x": 1, "y": 1, "available": true},
+            {"x": 2, "y": 1, "available": true},
+            {"x": 0, "y": 2, "available": true},
+            {"x": 1, "y": 2, "available": true},
+            {"x": 2, "y": 2, "available": true}
+          ]
+        }
+      },
+      "expected_results": {
+        "simulation_success": true,
+        "selected_points_min": 3,
+        "selected_points_max": 9,
+        "coverage_percentage_min": 33,
+        "execution_time_max_seconds": 10
+      },
+      "validation_criteria": [
+        "Simulation completes successfully",
+        "Selected points within expected range",
+        "Coverage statistics calculated",
+        "Performance metrics provided"
+      ]
+    },
+    {
+      "id": "TC007",
+      "name": "ASML Export Generation",
+      "description": "Export strategy results in ASML JSON format",
+      "type": "export",
+      "input": {
+        "schematic_id": "created_in_tc001",
+        "export_format": "asml"
+      },
+      "expected_results": {
+        "export_success": true,
+        "format": "application/json",
+        "required_fields": ["format", "version", "wafer_data", "sampling_points"],
+        "coordinate_system": "center_origin"
+      },
+      "validation_criteria": [
+        "Valid JSON format generated",
+        "All required ASML fields present",
+        "Coordinate transformations applied",
+        "Metadata includes validation score"
+      ]
+    },
+    {
+      "id": "TC008",
+      "name": "KLA Export Generation",
+      "description": "Export strategy results in KLA XML format", 
+      "type": "export",
+      "input": {
+        "schematic_id": "created_in_tc001",
+        "export_format": "kla"
+      },
+      "expected_results": {
+        "export_success": true,
+        "format": "application/xml",
+        "root_element": "KLA_SamplingPlan",
+        "coordinate_system": "corner_origin"
+      },
+      "validation_criteria": [
+        "Valid XML format generated",
+        "KLA-specific coordinate system used", 
+        "Site elements properly formatted",
+        "Validation information included"
+      ]
+    },
+    {
+      "id": "TC009",
+      "name": "Strategy Lifecycle Management",
+      "description": "Test strategy promotion through lifecycle states",
+      "type": "lifecycle",
+      "input": {
+        "strategy_id": "created_in_tc004",
+        "promotions": [
+          {"from": "draft", "to": "review", "user": "review_engineer"},
+          {"from": "review", "to": "approved", "user": "fab_manager"}
+        ]
+      },
+      "expected_results": {
+        "promotion_success": true,
+        "final_state": "approved",
+        "audit_trail_created": true,
+        "version_incremented": true
+      },
+      "validation_criteria": [
+        "State transitions follow valid workflow",
+        "User permissions enforced",
+        "Audit trail maintained",
+        "Version tracking updated"
+      ]
+    },
+    {
+      "id": "TC010",
+      "name": "Error Handling - Invalid File",
+      "description": "Test error handling for invalid file upload",
+      "type": "error_handling",
+      "input": {
+        "file": "invalid_file.txt",
+        "format": "text/plain"
+      },
+      "expected_results": {
+        "upload_success": false,
+        "error_code": 400,
+        "error_message_contains": "unsupported format",
+        "recovery_suggestions": true
+      },
+      "validation_criteria": [
+        "Clear error message provided",
+        "Appropriate HTTP status code",
+        "Supported formats listed",
+        "No system crash or data corruption"
+      ]
+    },
+    {
+      "id": "TC011",
+      "name": "Error Handling - Oversized File",
+      "description": "Test file size limit enforcement",
+      "type": "error_handling",
+      "input": {
+        "file_size_mb": 150,
+        "max_allowed_mb": 100
+      },
+      "expected_results": {
+        "upload_success": false,
+        "error_code": 413,
+        "error_message_contains": "file too large",
+        "max_size_displayed": true
+      },
+      "validation_criteria": [
+        "File size limit enforced",
+        "Clear size limit communication",
+        "Upload rejected before processing",
+        "No partial upload state"
+      ]
+    },
+    {
+      "id": "TC012",
+      "name": "Performance - Large Schematic",
+      "description": "Test performance with larger schematic files",
+      "type": "performance",
+      "input": {
+        "simulated_die_count": 10000,
+        "file_size_mb": 50
+      },
+      "expected_results": {
+        "upload_time_max_seconds": 30,
+        "parse_time_max_seconds": 60,
+        "memory_usage_max_mb": 500,
+        "response_time_max_ms": 5000
+      },
+      "validation_criteria": [
+        "Upload completes within time limit",
+        "Parsing handles large datasets",
+        "Memory usage remains reasonable",
+        "System remains responsive"
+      ]
+    }
+  ],
+  "test_execution_plan": {
+    "phases": [
+      {
+        "phase": "setup",
+        "description": "Verify system health and setup",
+        "test_cases": ["health_check", "database_connection"]
+      },
+      {
+        "phase": "schematic_upload",
+        "description": "Test all schematic format uploads",
+        "test_cases": ["TC001", "TC002", "TC003"]
+      },
+      {
+        "phase": "strategy_creation",
+        "description": "Test strategy creation and configuration",
+        "test_cases": ["TC004"]
+      },
+      {
+        "phase": "validation_simulation", 
+        "description": "Test validation and simulation workflows",
+        "test_cases": ["TC005", "TC006"]
+      },
+      {
+        "phase": "export_generation",
+        "description": "Test export functionality",
+        "test_cases": ["TC007", "TC008"]
+      },
+      {
+        "phase": "lifecycle_management",
+        "description": "Test strategy lifecycle features",
+        "test_cases": ["TC009"]
+      },
+      {
+        "phase": "error_handling",
+        "description": "Test error scenarios and recovery",
+        "test_cases": ["TC010", "TC011"]
+      },
+      {
+        "phase": "performance",
+        "description": "Test system performance limits",
+        "test_cases": ["TC012"]
+      }
+    ]
+  },
+  "success_criteria": {
+    "overall": {
+      "pass_rate_minimum": 85,
+      "critical_failures_max": 0,
+      "performance_degradation_max_percent": 20
+    },
+    "individual": {
+      "upload_success_rate_min": 95,
+      "validation_accuracy_min": 90,
+      "export_format_compliance": 100,
+      "error_handling_coverage": 100
+    }
+  },
+  "demo_environment": {
+    "backend_url": "http://localhost:8000",
+    "frontend_url": "http://localhost:3001", 
+    "database": "SQLite (auto-created)",
+    "test_data_location": "demo/",
+    "required_dependencies": ["gdspy", "ezdxf", "svglib"]
+  }
+}

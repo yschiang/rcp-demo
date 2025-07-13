@@ -137,7 +137,7 @@ class StrategyDefinition:
         # This will include proper type conversion and validation
         pass
     
-    def validate(self) -> List[str]:
+    def validate(self, require_rules: bool = True) -> List[str]:
         """Validate strategy definition and return list of errors."""
         errors = []
         
@@ -150,7 +150,8 @@ class StrategyDefinition:
         if not self.tool_type.strip():
             errors.append("Tool type is required")
             
-        if not self.rules:
+        # Only require rules if explicitly requested (for execution vs creation)
+        if require_rules and not self.rules:
             errors.append("At least one rule is required")
             
         return errors

@@ -79,10 +79,14 @@ class SimulationResult(BaseModel):
     warnings: List[str] = Field(default_factory=list)
 
 
-# Dependency injection
+# Dependency injection - singleton for development
+_strategy_service = None
+
 def get_strategy_service() -> StrategyService:
-    # In production, this would be properly injected
-    return StrategyService()
+    global _strategy_service
+    if _strategy_service is None:
+        _strategy_service = StrategyService()
+    return _strategy_service
 
 
 @router.post("/", response_model=StrategyResponse)

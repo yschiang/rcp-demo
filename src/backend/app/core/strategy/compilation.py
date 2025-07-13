@@ -100,7 +100,7 @@ class StrategyCompiler:
     Handles dependency resolution, validation, and optimization.
     """
     
-    def __init__(self, rule_factory: 'RuleFactory'):
+    def __init__(self, rule_factory):
         self.rule_factory = rule_factory
         self._compilation_cache: Dict[str, CompiledStrategy] = {}
     
@@ -159,7 +159,8 @@ class CompilationError(Exception):
 class RuleFactory:
     """Factory for creating executable rules from rule configurations."""
     
-    def __init__(self):
+    def __init__(self, plugin_factory=None):
+        self.plugin_factory = plugin_factory
         self._rule_registry: Dict[str, type] = {}
     
     def register_rule_type(self, rule_type: str, rule_class: type):
@@ -168,6 +169,14 @@ class RuleFactory:
     
     def create_rule(self, rule_config: RuleConfig) -> ExecutableRule:
         """Create executable rule from configuration."""
+        # First try plugin system if available
+        if self.plugin_factory:
+            try:
+                return self.plugin_factory.create_rule(rule_config.rule_type, rule_config.parameters)
+            except Exception:
+                pass  # Fall back to legacy registry
+        
+        # Fallback to legacy registry
         rule_class = self._rule_registry.get(rule_config.rule_type)
         if not rule_class:
             raise CompilationError(f"Unknown rule type: {rule_config.rule_type}")
@@ -176,4 +185,7 @@ class RuleFactory:
     
     def get_available_rule_types(self) -> List[str]:
         """Get list of available rule types."""
-        return list(self._rule_registry.keys())
+        types = list(self._rule_registry.keys())
+        if self.plugin_factory:
+            types.extend(self.plugin_factory.get_available_rule_types())
+        return list(set(types))  # Remove duplicates

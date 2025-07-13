@@ -30,13 +30,21 @@ class StrategyParser:
     
     def convert_definition_to_generic(self, definition) -> GenericStrategy:
         """Convert StrategyDefinition to GenericStrategy."""
+        # Map rule types from snake_case to PascalCase
+        rule_type_map = {
+            "fixed_point": "FixedPoint",
+            "center_edge": "CenterEdge",
+            "uniform_grid": "UniformGrid",
+            "random_sampling": "RandomSampling"
+        }
+        
         # Convert StrategyDefinition rules to legacy format
         config = {
             "name": definition.name,
             "tool_model": definition.target_vendor,
             "rules": [
                 {
-                    "type": "FixedPoint" if rule.rule_type == "fixed_point" else rule.rule_type,
+                    "type": rule_type_map.get(rule.rule_type, rule.rule_type),
                     "points": rule.parameters.get("points", [])
                 }
                 for rule in definition.rules

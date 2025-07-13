@@ -7,9 +7,11 @@ from datetime import datetime
 
 from ..core.strategy.definition import StrategyDefinition, StrategyType, StrategyLifecycle
 from ..core.strategy.repository import StrategyManager, InMemoryStrategyRepository, StrategyVersion
-from ..core.strategy.compilation import StrategyCompiler, ExecutionContext
+from ..core.strategy.compilation import StrategyCompiler, ExecutionContext, RuleFactory
 from ..core.models.wafer_map import WaferMap
 from ..core.models.die import Die
+from ..core.plugins.registry import plugin_registry
+from ..core.plugins.rules import RulePluginFactory
 
 
 class StrategyService:
@@ -21,7 +23,11 @@ class StrategyService:
         # Use dependency injection in production
         self.repository = repository or InMemoryStrategyRepository()
         self.manager = StrategyManager(self.repository)
-        self.compiler = compiler or StrategyCompiler(None)  # Will need rule factory
+        
+        # Initialize plugin system and rule factory
+        plugin_rule_factory = RulePluginFactory(plugin_registry)
+        self.rule_factory = RuleFactory(plugin_rule_factory)
+        self.compiler = compiler or StrategyCompiler(self.rule_factory)
     
     def create_strategy(self,
                        name: str,
@@ -41,8 +47,8 @@ class StrategyService:
             lifecycle_state=StrategyLifecycle.DRAFT
         )
         
-        # Validate before saving
-        errors = definition.validate()
+        # Validate before saving (allow creation without rules)
+        errors = definition.validate(require_rules=False)
         if errors:
             raise ValueError(f"Strategy validation failed: {', '.join(errors)}")
         
@@ -73,8 +79,17 @@ class StrategyService:
             definition.description = updates['description']
         if 'rules' in updates:
             # Convert rule dictionaries to RuleConfig objects
-            # This would need proper implementation
-            pass
+            from ..core.strategy.definition import RuleConfig
+            rule_configs = []
+            for rule_data in updates['rules']:
+                rule_config = RuleConfig(
+                    rule_type=rule_data.get('rule_type', 'fixed_point'),
+                    parameters=rule_data.get('parameters', {}),
+                    weight=rule_data.get('weight', 1.0),
+                    enabled=rule_data.get('enabled', True)
+                )
+                rule_configs.append(rule_config)
+            definition.rules = rule_configs
         if 'conditions' in updates:
             # Update conditional logic
             pass
@@ -84,8 +99,8 @@ class StrategyService:
         
         definition.modified_at = datetime.now()
         
-        # Validate and save
-        errors = definition.validate()
+        # Validate and save (allow updates without rules)
+        errors = definition.validate(require_rules=False)
         if errors:
             raise ValueError(f"Strategy validation failed: {', '.join(errors)}")
         

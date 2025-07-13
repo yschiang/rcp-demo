@@ -1,0 +1,1434 @@
+openapi: 3.0.3
+info:
+  title: Wafer Sampling Strategy System API
+  description: |
+    Comprehensive API for managing wafer sampling strategies and schematic data processing.
+    
+    This system provides:
+    - Strategy creation, validation, and simulation
+    - Multi-format schematic file processing (GDSII, DXF, SVG)
+    - Die boundary extraction and validation
+    - Strategy-schematic alignment validation
+    - Export capabilities for tool-specific formats
+    
+    ## Supported Schematic Formats
+    - **GDSII**: IC layout format with die boundary extraction
+    - **DXF**: CAD drawing format with geometric entity parsing
+    - **SVG**: Web-friendly format with visual elements
+    
+    ## Key Features
+    - Database persistence with audit trails
+    - Advanced validation engine with scoring metrics
+    - Multi-format export capabilities
+    - Real-time simulation and coverage analysis
+  version: 1.0.0
+  contact:
+    name: Backend Engineering Team
+    url: https://github.com/yschiang/rcp-demo
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.wafer-strategy.com
+    description: Production server
+
+tags:
+  - name: health
+    description: System health and status
+  - name: strategies
+    description: Strategy management operations
+  - name: schematics
+    description: Schematic file processing and management
+  - name: validation
+    description: Strategy validation operations
+
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check
+      description: Check system health and status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/strategies:
+    get:
+      tags:
+        - strategies
+      summary: List strategies
+      description: Retrieve a list of strategies with optional filtering
+      operationId: listStrategies
+      parameters:
+        - name: author
+          in: query
+          description: Filter by author email
+          required: false
+          schema:
+            type: string
+        - name: strategy_type
+          in: query
+          description: Filter by strategy type
+          required: false
+          schema:
+            $ref: '#/components/schemas/StrategyType'
+        - name: process_step
+          in: query
+          description: Filter by process step
+          required: false
+          schema:
+            type: string
+        - name: lifecycle_state
+          in: query
+          description: Filter by lifecycle state
+          required: false
+          schema:
+            $ref: '#/components/schemas/LifecycleState'
+        - name: limit
+          in: query
+          description: Maximum number of results
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+      responses:
+        '200':
+          description: List of strategies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StrategyListResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - strategies
+      summary: Create strategy
+      description: Create a new sampling strategy
+      operationId: createStrategy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StrategyCreateRequest'
+      responses:
+        '201':
+          description: Strategy created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StrategyCreateResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/strategies/{strategy_id}:
+    get:
+      tags:
+        - strategies
+      summary: Get strategy details
+      description: Retrieve detailed information about a specific strategy
+      operationId: getStrategy
+      parameters:
+        - name: strategy_id
+          in: path
+          required: true
+          description: Strategy UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Strategy details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StrategyDetails'
+        '404':
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - strategies
+      summary: Update strategy
+      description: Update an existing strategy
+      operationId: updateStrategy
+      parameters:
+        - name: strategy_id
+          in: path
+          required: true
+          description: Strategy UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StrategyCreateRequest'
+      responses:
+        '200':
+          description: Strategy updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StrategyUpdateResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - strategies
+      summary: Delete strategy
+      description: Delete a strategy and all associated data
+      operationId: deleteStrategy
+      parameters:
+        - name: strategy_id
+          in: path
+          required: true
+          description: Strategy UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Strategy deleted successfully
+        '404':
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/strategies/{strategy_id}/rules:
+    put:
+      tags:
+        - strategies
+      summary: Update strategy rules
+      description: Update the rules for a specific strategy
+      operationId: updateStrategyRules
+      parameters:
+        - name: strategy_id
+          in: path
+          required: true
+          description: Strategy UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RulesUpdateRequest'
+      responses:
+        '200':
+          description: Rules updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StrategyUpdateResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/strategies/{strategy_id}/simulate:
+    post:
+      tags:
+        - strategies
+      summary: Simulate strategy
+      description: Execute strategy simulation with given wafer map and parameters
+      operationId: simulateStrategy
+      parameters:
+        - name: strategy_id
+          in: path
+          required: true
+          description: Strategy UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequest'
+      responses:
+        '200':
+          description: Simulation completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/schematics/upload:
+    post:
+      tags:
+        - schematics
+      summary: Upload schematic file
+      description: Upload and parse a schematic file (GDSII, DXF, or SVG)
+      operationId: uploadSchematic
+      parameters:
+        - name: created_by
+          in: query
+          required: true
+          description: User email or ID
+          schema:
+            type: string
+        - name: coordinate_scale
+          in: query
+          required: false
+          description: Scale factor for coordinates
+          schema:
+            type: number
+            format: float
+            default: 1.0
+        - name: die_size_filter_min
+          in: query
+          required: false
+          description: Minimum die size filter
+          schema:
+            type: number
+            format: float
+        - name: die_size_filter_max
+          in: query
+          required: false
+          description: Maximum die size filter
+          schema:
+            type: number
+            format: float
+        - name: target_cell
+          in: query
+          required: false
+          description: Specific cell to parse (GDSII only)
+          schema:
+            type: string
+        - name: target_layer
+          in: query
+          required: false
+          description: Specific layer to process
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Schematic file (max 100MB)
+              required:
+                - file
+      responses:
+        '200':
+          description: File uploaded and processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchematicResponse'
+        '400':
+          description: Validation error or unsupported format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/schematics/:
+    get:
+      tags:
+        - schematics
+      summary: List schematics
+      description: Retrieve a list of uploaded schematics with filtering options
+      operationId: listSchematics
+      parameters:
+        - name: created_by
+          in: query
+          required: false
+          description: Filter by creator
+          schema:
+            type: string
+        - name: format_type
+          in: query
+          required: false
+          description: Filter by format type
+          schema:
+            $ref: '#/components/schemas/SchematicFormat'
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+      responses:
+        '200':
+          description: List of schematics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchematicListResponse'
+
+  /api/v1/schematics/{schematic_id}:
+    get:
+      tags:
+        - schematics
+      summary: Get schematic details
+      description: Retrieve detailed information about a specific schematic
+      operationId: getSchematic
+      parameters:
+        - name: schematic_id
+          in: path
+          required: true
+          description: Schematic UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Schematic details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchematicResponse'
+        '404':
+          description: Schematic not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - schematics
+      summary: Delete schematic
+      description: Delete a schematic and all associated validation results
+      operationId: deleteSchematic
+      parameters:
+        - name: schematic_id
+          in: path
+          required: true
+          description: Schematic UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Schematic deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Schematic deleted successfully"
+        '404':
+          description: Schematic not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/schematics/{schematic_id}/die-boundaries:
+    get:
+      tags:
+        - schematics
+      summary: Get die boundaries
+      description: Retrieve die boundary data for a schematic
+      operationId: getDieBoundaries
+      parameters:
+        - name: schematic_id
+          in: path
+          required: true
+          description: Schematic UUID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          description: Limit number of boundaries returned
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Die boundaries data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DieBoundariesResponse'
+        '404':
+          description: Schematic not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/schematics/{schematic_id}/validate:
+    post:
+      tags:
+        - validation
+      summary: Validate strategy against schematic
+      description: Validate a strategy against schematic data and calculate alignment metrics
+      operationId: validateStrategy
+      parameters:
+        - name: schematic_id
+          in: path
+          required: true
+          description: Schematic UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Schematic or strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/schematics/{schematic_id}/validations:
+    get:
+      tags:
+        - validation
+      summary: List validation results
+      description: List validation results for a schematic
+      operationId: listValidations
+      parameters:
+        - name: schematic_id
+          in: path
+          required: true
+          description: Schematic UUID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: List of validation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationListResponse'
+
+  /api/v1/schematics/validations/{validation_id}:
+    get:
+      tags:
+        - validation
+      summary: Get validation result details
+      description: Retrieve detailed validation result including conflicts and recommendations
+      operationId: getValidationResult
+      parameters:
+        - name: validation_id
+          in: path
+          required: true
+          description: Validation UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detailed validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationDetailResponse'
+        '404':
+          description: Validation result not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/schematics/{schematic_id}/export/{format_type}:
+    get:
+      tags:
+        - schematics
+      summary: Export schematic
+      description: Export schematic data in specified format
+      operationId: exportSchematic
+      parameters:
+        - name: schematic_id
+          in: path
+          required: true
+          description: Schematic UUID
+          schema:
+            type: string
+            format: uuid
+        - name: format_type
+          in: path
+          required: true
+          description: Export format
+          schema:
+            type: string
+            enum: [svg, dxf]
+      responses:
+        '200':
+          description: Exported file
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+            application/dxf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Unsupported format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Schematic not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/schematics/formats/supported:
+    get:
+      tags:
+        - schematics
+      summary: Get supported formats
+      description: Get list of supported schematic file formats and capabilities
+      operationId: getSupportedFormats
+      responses:
+        '200':
+          description: Supported formats information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportedFormatsResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        environment:
+          type: string
+          example: "development"
+        version:
+          type: string
+          example: "1.0.0"
+        timestamp:
+          type: number
+          format: float
+          example: 1672531200.0
+
+    StrategyType:
+      type: string
+      enum:
+        - center_edge
+        - uniform_grid
+        - random_sampling
+        - fixed_point
+        - hotspot_priority
+
+    LifecycleState:
+      type: string
+      enum:
+        - draft
+        - review
+        - approved
+        - active
+        - deprecated
+
+    SchematicFormat:
+      type: string
+      enum:
+        - gdsii
+        - dxf
+        - svg
+
+    CoordinateSystem:
+      type: string
+      enum:
+        - cartesian
+        - polar
+        - gdsii_units
+        - cad_units
+        - normalized
+
+    ValidationStatus:
+      type: string
+      enum:
+        - pass
+        - warning
+        - fail
+        - not_validated
+
+    RuleConfig:
+      type: object
+      properties:
+        rule_type:
+          type: string
+          enum: [fixed_point, center_edge, uniform_grid, random_sampling]
+        parameters:
+          type: object
+          description: Rule-specific parameters
+          additionalProperties: true
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          default: 1.0
+        enabled:
+          type: boolean
+          default: true
+        conditions:
+          $ref: '#/components/schemas/ConditionalLogic'
+
+    ConditionalLogic:
+      type: object
+      properties:
+        wafer_size:
+          type: array
+          items:
+            type: string
+          example: ["200mm", "300mm"]
+        product_types:
+          type: array
+          items:
+            type: string
+          example: ["logic", "memory"]
+        process_layers:
+          type: array
+          items:
+            type: string
+          example: ["poly", "metal1"]
+
+    TransformationConfig:
+      type: object
+      properties:
+        rotation_angle:
+          type: number
+          format: float
+          default: 0.0
+        coordinate_offset:
+          type: object
+          properties:
+            x:
+              type: number
+              format: float
+              default: 0.0
+            y:
+              type: number
+              format: float
+              default: 0.0
+        scaling_factor:
+          type: number
+          format: float
+          default: 1.0
+
+    StrategyCreateRequest:
+      type: object
+      required:
+        - name
+        - strategy_type
+        - process_step
+        - tool_type
+        - author
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: "Center Edge Strategy"
+        description:
+          type: string
+          maxLength: 500
+          example: "Center and edge sampling for critical layers"
+        strategy_type:
+          $ref: '#/components/schemas/StrategyType'
+        process_step:
+          type: string
+          maxLength: 100
+          example: "lithography"
+        tool_type:
+          type: string
+          maxLength: 100
+          example: "ASML_scanner"
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleConfig'
+        conditions:
+          $ref: '#/components/schemas/ConditionalLogic'
+        transformations:
+          $ref: '#/components/schemas/TransformationConfig'
+        target_vendor:
+          type: string
+          example: "ASML"
+        vendor_specific_params:
+          type: object
+          additionalProperties: true
+        author:
+          type: string
+          format: email
+          example: "engineer@company.com"
+
+    StrategyCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          example: "created"
+        version:
+          type: string
+          example: "1.0.0"
+        created_at:
+          type: string
+          format: date-time
+
+    StrategyUpdateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: "updated"
+        version:
+          type: string
+          example: "1.0.1"
+        modified_at:
+          type: string
+          format: date-time
+
+    StrategyDetails:
+      allOf:
+        - $ref: '#/components/schemas/StrategyCreateRequest'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            version:
+              type: string
+              example: "1.0.0"
+            created_at:
+              type: string
+              format: date-time
+            modified_at:
+              type: string
+              format: date-time
+            lifecycle_state:
+              $ref: '#/components/schemas/LifecycleState'
+            schema_version:
+              type: string
+              example: "1.0"
+
+    StrategyListResponse:
+      type: object
+      properties:
+        strategies:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              strategy_type:
+                $ref: '#/components/schemas/StrategyType'
+              process_step:
+                type: string
+              tool_type:
+                type: string
+              author:
+                type: string
+              version:
+                type: string
+              lifecycle_state:
+                $ref: '#/components/schemas/LifecycleState'
+              created_at:
+                type: string
+                format: date-time
+              modified_at:
+                type: string
+                format: date-time
+        total_count:
+          type: integer
+
+    RulesUpdateRequest:
+      type: object
+      required:
+        - rules
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleConfig'
+
+    Die:
+      type: object
+      properties:
+        x:
+          type: integer
+        y:
+          type: integer
+        available:
+          type: boolean
+
+    WaferMap:
+      type: object
+      properties:
+        dies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Die'
+
+    SimulationRequest:
+      type: object
+      required:
+        - wafer_map
+      properties:
+        wafer_map:
+          $ref: '#/components/schemas/WaferMap'
+        process_parameters:
+          type: object
+          properties:
+            wafer_size:
+              type: string
+              example: "300mm"
+            product_type:
+              type: string
+              example: "logic"
+          additionalProperties: true
+
+    SimulationResponse:
+      type: object
+      properties:
+        simulation_id:
+          type: string
+          example: "sim-123"
+        selected_dies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Die'
+        statistics:
+          type: object
+          properties:
+            total_dies:
+              type: integer
+            available_dies:
+              type: integer
+            selected_count:
+              type: integer
+            coverage_percentage:
+              type: number
+              format: float
+            distribution:
+              type: object
+              properties:
+                x_range:
+                  type: object
+                  properties:
+                    min:
+                      type: integer
+                    max:
+                      type: integer
+                y_range:
+                  type: object
+                  properties:
+                    min:
+                      type: integer
+                    max:
+                      type: integer
+                center_of_mass:
+                  type: object
+                  properties:
+                    x:
+                      type: number
+                      format: float
+                    y:
+                      type: number
+                      format: float
+
+    SchematicResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        format_type:
+          $ref: '#/components/schemas/SchematicFormat'
+        upload_date:
+          type: string
+          format: date-time
+        die_count:
+          type: integer
+        available_die_count:
+          type: integer
+        coordinate_system:
+          $ref: '#/components/schemas/CoordinateSystem'
+        wafer_size:
+          type: string
+          nullable: true
+        statistics:
+          type: object
+          properties:
+            die_count:
+              type: integer
+            available_die_count:
+              type: integer
+            layout_bounds:
+              type: object
+              properties:
+                x_min:
+                  type: number
+                y_min:
+                  type: number
+                x_max:
+                  type: number
+                y_max:
+                  type: number
+            layout_size:
+              type: object
+              properties:
+                width:
+                  type: number
+                height:
+                  type: number
+            coordinate_system:
+              type: string
+            format_type:
+              type: string
+            wafer_size:
+              type: string
+              nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    SchematicListResponse:
+      type: object
+      properties:
+        schematics:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              filename:
+                type: string
+              format_type:
+                $ref: '#/components/schemas/SchematicFormat'
+              upload_date:
+                type: string
+                format: date-time
+              die_count:
+                type: integer
+              available_die_count:
+                type: integer
+              wafer_size:
+                type: string
+                nullable: true
+              created_by:
+                type: string
+        total_count:
+          type: integer
+
+    DieBoundary:
+      type: object
+      properties:
+        die_id:
+          type: string
+        x_min:
+          type: number
+          format: float
+        y_min:
+          type: number
+          format: float
+        x_max:
+          type: number
+          format: float
+        y_max:
+          type: number
+          format: float
+        center_x:
+          type: number
+          format: float
+        center_y:
+          type: number
+          format: float
+        width:
+          type: number
+          format: float
+        height:
+          type: number
+          format: float
+        area:
+          type: number
+          format: float
+        available:
+          type: boolean
+        metadata:
+          type: object
+          additionalProperties: true
+
+    DieBoundariesResponse:
+      type: object
+      properties:
+        schematic_id:
+          type: string
+          format: uuid
+        total_die_count:
+          type: integer
+        returned_count:
+          type: integer
+        die_boundaries:
+          type: array
+          items:
+            $ref: '#/components/schemas/DieBoundary'
+
+    ValidationRequest:
+      type: object
+      required:
+        - strategy_id
+        - validated_by
+      properties:
+        strategy_id:
+          type: string
+          format: uuid
+        validated_by:
+          type: string
+          format: email
+
+    ValidationResponse:
+      type: object
+      properties:
+        validation_id:
+          type: string
+          format: uuid
+        schematic_id:
+          type: string
+          format: uuid
+        strategy_id:
+          type: string
+          format: uuid
+        validation_status:
+          $ref: '#/components/schemas/ValidationStatus'
+        alignment_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        coverage_percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        total_points:
+          type: integer
+        valid_points:
+          type: integer
+        error_count:
+          type: integer
+        warning_count:
+          type: integer
+        recommendations:
+          type: array
+          items:
+            type: string
+        validation_date:
+          type: string
+          format: date-time
+
+    ValidationConflict:
+      type: object
+      properties:
+        conflict_type:
+          type: string
+          example: "out_of_bounds"
+        strategy_point:
+          type: array
+          items:
+            type: number
+          minItems: 2
+          maxItems: 2
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [error, warning, info]
+        recommendation:
+          type: string
+          nullable: true
+        affected_die_id:
+          type: string
+          nullable: true
+
+    ValidationWarning:
+      type: object
+      properties:
+        warning_type:
+          type: string
+        description:
+          type: string
+        affected_area:
+          type: array
+          items:
+            type: number
+          minItems: 4
+          maxItems: 4
+          nullable: true
+        recommendation:
+          type: string
+          nullable: true
+
+    ValidationDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/ValidationResponse'
+        - type: object
+          properties:
+            conflicts:
+              type: array
+              items:
+                $ref: '#/components/schemas/ValidationConflict'
+            warnings:
+              type: array
+              items:
+                $ref: '#/components/schemas/ValidationWarning'
+
+    ValidationListResponse:
+      type: object
+      properties:
+        schematic_id:
+          type: string
+          format: uuid
+        total_validations:
+          type: integer
+        validations:
+          type: array
+          items:
+            type: object
+            properties:
+              validation_id:
+                type: string
+                format: uuid
+              schematic_id:
+                type: string
+                format: uuid
+              strategy_id:
+                type: string
+                format: uuid
+              validation_date:
+                type: string
+                format: date-time
+              validation_status:
+                $ref: '#/components/schemas/ValidationStatus'
+              alignment_score:
+                type: number
+                format: float
+              coverage_percentage:
+                type: number
+                format: float
+              total_points:
+                type: integer
+              valid_points:
+                type: integer
+              validated_by:
+                type: string
+
+    SupportedFormatsResponse:
+      type: object
+      properties:
+        supported_formats:
+          type: array
+          items:
+            type: object
+            properties:
+              format:
+                type: string
+              description:
+                type: string
+              extensions:
+                type: array
+                items:
+                  type: string
+              features:
+                type: array
+                items:
+                  type: string
+              parser_status:
+                type: string
+                enum: [available, unavailable, experimental]
+        upload_limits:
+          type: object
+          properties:
+            max_file_size:
+              type: string
+              example: "100MB"
+            supported_coordinate_systems:
+              type: array
+              items:
+                type: string
+            die_detection_methods:
+              type: array
+              items:
+                type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - NOT_FOUND
+                - BUSINESS_LOGIC_ERROR
+                - FILE_UPLOAD_ERROR
+                - PARSER_ERROR
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (future implementation)
+
+security:
+  - ApiKeyAuth: []
+
+externalDocs:
+  description: Find more info about the Wafer Sampling Strategy System
+  url: https://github.com/yschiang/rcp-demo

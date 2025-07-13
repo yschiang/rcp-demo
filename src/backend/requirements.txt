@@ -1,0 +1,45 @@
+# Core dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.4.2
+pydantic-settings==2.0.3
+
+# Database and storage
+sqlalchemy==2.0.23
+alembic==1.12.1
+asyncpg==0.29.0  # PostgreSQL async driver
+aiosqlite==0.19.0  # SQLite async driver for development
+
+# Authentication and security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# Async and HTTP
+httpx==0.25.2
+aiofiles==23.2.1
+
+# Data processing
+numpy==1.24.4
+pandas==2.0.3
+pyyaml==6.0.1
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+httpx==0.25.2  # For testing API clients
+
+# Development tools
+black==23.10.1
+flake8==6.1.0
+mypy==1.7.0
+pre-commit==3.5.0
+
+# Logging and monitoring
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# Optional vendor integrations
+lxml==4.9.3  # For XML processing (KLA)
+xmltodict==0.13.0  # XML to dict conversion

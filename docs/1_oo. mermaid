@@ -1,0 +1,67 @@
+classDiagram
+    %% === Base Data Models ===
+    class Die {
+        - int x
+        - int y
+        - bool available
+    }
+
+    class WaferMap {
+        - List~Die~ dies
+        + get_available_dies(): List~Die~
+    }
+
+    %% === Rule Interface & Implementations ===
+    class Rule {
+        <<abstract>>
+        + apply(WaferMap): List~Die~
+    }
+
+    class FixedPointRule {
+        + apply(WaferMap): List~Die~
+    }
+
+    class CenterEdgeRule {
+        + apply(WaferMap): List~Die~
+    }
+
+    Rule <|-- FixedPointRule
+    Rule <|-- CenterEdgeRule
+
+    %% === Vendor Mapping ===
+    class VendorMapping {
+        <<abstract>>
+        + transform(List~Die~): List~Die~
+    }
+
+    class ASMLMapping {
+        + transform(List~Die~): List~Die~
+    }
+
+    class KLAMapping {
+        + transform(List~Die~): List~Die~
+    }
+
+    VendorMapping <|-- ASMLMapping
+    VendorMapping <|-- KLAMapping
+
+    %% === Strategy & Parser ===
+    class GenericStrategy {
+        - String name
+        - List~Rule~ rules
+        - VendorMapping mapping
+        + apply(WaferMap): List~Die~
+    }
+
+    class StrategyParser {
+        - Dict~String, VendorMapping~ plugin_registry
+        + parse(config): GenericStrategy
+    }
+
+    %% === Associations ===
+    GenericStrategy --> Rule : uses
+    GenericStrategy --> VendorMapping : optional
+    GenericStrategy --> WaferMap : apply input
+    WaferMap --> Die : contains
+    StrategyParser --> VendorMapping : uses registry
+    StrategyParser --> GenericStrategy : creates

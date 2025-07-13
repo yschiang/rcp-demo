@@ -1,0 +1,24 @@
+flowchart TD
+    subgraph User
+        A1["🧑‍💼 Metrology Engineer"]
+        A1 --> B1["📝 Prepare Generic Strategy Format (YAML/Excel)"]
+        A1 --> B2["➡️ Launch Strategy Generator (UI)"]
+    end
+
+    subgraph System UI Layer
+        B2 --> B3["🧭 Define Strategy via Guided Form"]
+    end
+
+    subgraph Backend Logic Layer
+        B1 --> C["🧩 Parse into Generic Strategy Object"]
+        B3 --> C
+        C --> D["🔍 Look Up Tool Model Mapping"]
+        D --> E["🔄 Convert to Vendor Format"]
+        E --> F["📄 Output Tool-Specific Strategy File (JSON/XML/CSV)"]
+        F --> G["🏠 Send to Tool Control System"]
+    end
+
+
+    class A1,B1,B2 user;
+    class B3 ui;
+    class C,D,E,F,G backend;

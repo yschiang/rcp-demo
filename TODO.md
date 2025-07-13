@@ -20,8 +20,10 @@ This document outlines the complete implementation roadmap to transform the curr
 - ✅ **GDSII schematic parser with die boundary extraction**
 - ✅ **Schematic data models (SchematicData, DieBoundary, CoordinateSystem)**
 
-**🎯 PHASE 2 DEMO COMPLETION (90% Complete - Critical Gap Items):**
-- 🚨 **MISSING**: Schematic upload API endpoint + frontend upload component  
+**🎯 PHASE 2 DEMO COMPLETION (75% Complete - Demo Blocked by Frontend Issues):**
+- 🚨 **CRITICAL**: Frontend schematic upload showing "NaN undefined" (using mock data instead of real API)
+- 🚨 **CRITICAL**: API endpoint routing issue (backend has double prefix `/api/v1/api/v1/strategies/`)
+- 🚨 **CRITICAL**: Demo scripts and web interface not functional due to API mismatches
 - 🚨 **MISSING**: DXF/SVG parsers (only GDSII complete)
 - 🚨 **MISSING**: Schematic → WaferMap integration in wizard
 - 🚨 **MISSING**: Tool-specific output generation with validation
@@ -202,11 +204,12 @@ This document outlines the complete implementation roadmap to transform the curr
   - ✅ Multiple die detection methods (shapes, text, references)
 
 - [ ] **Schematic Upload API & Frontend** 🚨 (CRITICAL GAP)
-  - [ ] Backend: POST /api/v1/schematics/upload endpoint
-  - [ ] Backend: Schematic file validation and storage
-  - [ ] Frontend: Schematic upload step in strategy wizard
-  - [ ] Frontend: File upload component with drag-and-drop
-  - [ ] Frontend: Upload progress and error handling
+  - ✅ Backend: POST /api/v1/schematics/upload endpoint (WORKING)
+  - ✅ Backend: Schematic file validation and storage (WORKING)
+  - 🚨 Frontend: SchematicUploadStep.tsx using mock data instead of real API calls
+  - 🚨 Missing: schematicApi.ts service layer for API integration
+  - 🚨 Missing: snake_case to camelCase data transformation
+  - 🚨 Frontend: Upload progress and error handling incomplete
 
 - [ ] **Additional Schematic Parsers** ⚡ (HIGH PRIORITY)
   - [x] ✅ GDSII parser (COMPLETED)
@@ -431,11 +434,32 @@ This document outlines the complete implementation roadmap to transform the curr
   - ⚠️ NFR4: Access Control (framework ready)
   - ✅ NFR5: Extensibility (comprehensive plugin system)
 
-- 🚧 **Phase 2 Demo Workflow** (90% Complete - Missing Upload API)
+- 🚧 **Phase 2 Demo Workflow** (75% Complete - Blocked by Frontend Issues)
   - ✅ Strategy creation workflow operational
   - ✅ Wafer map visualization working
   - ✅ Strategy validation and simulation working
-  - 🚨 **MISSING**: Schematic upload → wafer map → validate → export workflow
+  - 🚨 **BLOCKED**: Schematic upload showing "NaN undefined" due to mock data usage
+  - 🚨 **BLOCKED**: Web interface non-functional due to API routing issues
+
+### 🚨 DEMO BLOCKING ISSUES (Immediate Fix Required)
+
+**High Priority - Demo Stoppers:**
+1. **Frontend Schematic Upload Bug**
+   - Component shows "NaN undefined" instead of real file data
+   - Using hardcoded mock data instead of API integration
+   - Missing schematicApi.ts service layer
+   - Assigned to: Frontend Team
+
+2. **Backend API Routing Issue** 
+   - Double prefix in strategies router creating `/api/v1/api/v1/strategies/`
+   - Should be `/api/v1/strategies/`
+   - Frontend receiving 404 errors for strategy operations
+   - Assigned to: Backend Team
+
+3. **Web Demo Non-Functional**
+   - Strategy list page shows "Error Loading Strategies"
+   - Upload wizard step 2 shows incorrect data
+   - Demo scripts require API endpoint corrections
 
 ### Performance Targets ✅ (ACHIEVED)
 - ✅ Strategy compilation time < 2 seconds for complex strategies (achieved)
@@ -451,9 +475,10 @@ This document outlines the complete implementation roadmap to transform the curr
 
 ## 🎯 PHASE 2 DEMO - SPECIFIC NEXT STEPS
 
-### Critical Path to Demo Completion (Est. 1-2 days):
-1. **Schematic Upload API** - Add POST endpoint for file upload
-2. **Upload Frontend Component** - Add to strategy wizard
-3. **DXF/SVG Parsers** - Extend parser framework  
-4. **Schematic-WaferMap Integration** - Display uploaded data
-5. **Export Validation** - Tool-specific output with schematic validation
+### Critical Path to Demo Completion (Est. 2-3 days):
+1. **IMMEDIATE**: Fix backend router double prefix issue (strategies.py)
+2. **IMMEDIATE**: Create schematicApi.ts service in frontend  
+3. **IMMEDIATE**: Replace mock data with real API calls in SchematicUploadStep.tsx
+4. **IMMEDIATE**: Add snake_case to camelCase transformation
+5. **THEN**: Complete DXF/SVG parsers and full integration testing
+6. **THEN**: Schematic-WaferMap integration and export validation

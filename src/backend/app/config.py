@@ -27,15 +27,6 @@ class DatabaseConfig(BaseSettings):
         env_prefix = "DB_"
 
 
-class AuthConfig(BaseSettings):
-    """Authentication configuration."""
-    secret_key: str = Field(default="your-secret-key-change-in-production")
-    algorithm: str = Field(default="HS256")
-    access_token_expire_minutes: int = Field(default=30)
-    refresh_token_expire_days: int = Field(default=7)
-    
-    class Config:
-        env_prefix = "AUTH_"
 
 
 class APIConfig(BaseSettings):
@@ -127,7 +118,6 @@ class Settings(BaseSettings):
     
     # Sub-configurations
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
-    auth: AuthConfig = Field(default_factory=AuthConfig)
     api: APIConfig = Field(default_factory=APIConfig)
     plugins: PluginConfig = Field(default_factory=PluginConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)

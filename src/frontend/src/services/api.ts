@@ -26,27 +26,11 @@ class ApiClient {
       },
     });
 
-    // Request interceptor for auth tokens
-    this.client.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
     // Response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
-          // Handle authentication errors
-          localStorage.removeItem('auth_token');
-          window.location.href = '/login';
-        }
+        console.error('API Error:', error.response?.data || error.message);
         return Promise.reject(error);
       }
     );

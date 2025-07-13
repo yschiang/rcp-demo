@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" 
+     viewBox="0 0 200 200" 
+     width="200" height="200">
+  <title>Sample Wafer Layout</title>
+  <desc>Example wafer layout with 9 dies for testing schematic import</desc>
+  
+  <!-- Wafer outline -->
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#333" stroke-width="2"/>
+  
+  <!-- Die grid (3x3) -->
+  <rect id="die_001" x="50" y="50" width="30" height="30" fill="#4CAF50" stroke="#333" stroke-width="1"/>
+  <text x="65" y="70" text-anchor="middle" font-size="8" fill="white">001</text>
+  
+  <rect id="die_002" x="85" y="50" width="30" height="30" fill="#4CAF50" stroke="#333" stroke-width="1"/>
+  <text x="100" y="70" text-anchor="middle" font-size="8" fill="white">002</text>
+  
+  <rect id="die_003" x="120" y="50" width="30" height="30" fill="#4CAF50" stroke="#333" stroke-width="1"/>
+  <text x="135" y="70" text-anchor="middle" font-size="8" fill="white">003</text>
+  
+  <rect id="die_004" x="50" y="85" width="30" height="30" fill="#4CAF50" stroke="#333" stroke-width="1"/>
+  <text x="65" y="105" text-anchor="middle" font-size="8" fill="white">004</text>
+  
+  <rect id="die_005" x="85" y="85" width="30" height="30" fill="#4CAF50" stroke="#333" stroke-width="1"/>
+  <text x="100" y="105" text-anchor="middle" font-size="8" fill="white">005</text>
+  
+  <rect id="die_006" x="120" y="85" width="30" height="30" fill="#4CAF50" stroke="#333" stroke-width="1"/>
+  <text x="135" y="105" text-anchor="middle" font-size="8" fill="white">006</text>
+  
+  <rect id="die_007" x="50" y="120" width="30" height="30" fill="#4CAF50" stroke="#333" stroke-width="1"/>
+  <text x="65" y="140" text-anchor="middle" font-size="8" fill="white">007</text>
+  
+  <rect id="die_008" x="85" y="120" width="30" height="30" fill="#4CAF50" stroke="#333" stroke-width="1"/>
+  <text x="100" y="140" text-anchor="middle" font-size="8" fill="white">008</text>
+  
+  <rect id="die_009" x="120" y="120" width="30" height="30" fill="#F44336" stroke="#333" stroke-width="1"/>
+  <text x="135" y="140" text-anchor="middle" font-size="8" fill="white">009</text>
+  
+</svg>

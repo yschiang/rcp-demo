@@ -12,7 +12,7 @@ import time
 from .config import settings
 from .core.plugins.registry import plugin_registry
 from .core.plugins.rules import RulePluginFactory
-from .api.routes import strategies
+from .api.routes import strategies, schematics
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,8 @@ def create_app() -> FastAPI:
         }
     
     # Include routers
-    app.include_router(strategies.router)
+    app.include_router(strategies.router, prefix="/api/v1")
+    app.include_router(schematics.router, prefix="/api/v1")
     
     return app
 

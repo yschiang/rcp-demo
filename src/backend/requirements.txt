@@ -46,3 +46,13 @@ openpyxl==3.1.2  # Excel file support
 # Database ORM
 sqlalchemy==2.0.23
 alembic==1.13.1  # Database migrations
+
+# Schematic file parsing
+gdspy==1.6.13          # GDSII file handling
+ezdxf==1.0.3          # DXF file parsing  
+svglib==1.5.1         # SVG parsing
+Pillow==10.1.0        # Image processing for previews
+
+# File upload handling
+python-multipart==0.0.6  # FastAPI file uploads
+aiofiles==23.2.0      # Async file operations

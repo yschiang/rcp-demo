@@ -252,3 +252,14 @@ class StrategyService:
             "coverage_percentage": round(coverage_percentage, 2),
             "distribution": distribution
         }
+
+
+# Singleton instance
+_strategy_service = None
+
+def get_strategy_service() -> StrategyService:
+    """Get singleton instance of StrategyService."""
+    global _strategy_service
+    if _strategy_service is None:
+        _strategy_service = StrategyService()
+    return _strategy_service

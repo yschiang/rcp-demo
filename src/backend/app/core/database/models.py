@@ -6,10 +6,11 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from sqlalchemy import Column, String, Text, DateTime, Integer, Boolean, Index
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy import create_engine, ForeignKey
 
 from ..strategy.definition import StrategyDefinition, StrategyType, StrategyLifecycle, RuleConfig, ConditionalLogic, TransformationConfig
+from ..models.schematic import SchematicData, SchematicValidationResult, SchematicFormat, CoordinateSystem, ValidationStatus, DieBoundary, SchematicMetadata
 
 Base = declarative_base()
 
@@ -197,6 +198,271 @@ class DatabaseManager:
     def drop_tables(self):
         """Drop all database tables (for testing)."""
         Base.metadata.drop_all(bind=self.engine)
+
+
+class SchematicModel(Base):
+    """SQLAlchemy model for schematic data persistence."""
+    __tablename__ = "schematics"
+    
+    # Primary identification
+    id = Column(String(36), primary_key=True)
+    filename = Column(String(255), nullable=False)
+    format_type = Column(String(20), nullable=False)
+    upload_date = Column(DateTime, default=datetime.utcnow)
+    
+    # Layout configuration
+    coordinate_system = Column(String(50), default="cartesian")
+    wafer_size = Column(String(20), nullable=True)
+    
+    # Die boundaries (stored as JSON)
+    die_boundaries_json = Column(Text, nullable=False)
+    
+    # Metadata (stored as JSON)
+    metadata_json = Column(Text, nullable=True)
+    
+    # Computed statistics (cached for performance)
+    die_count = Column(Integer, default=0)
+    available_die_count = Column(Integer, default=0)
+    layout_bounds_json = Column(Text, nullable=True)  # [x_min, y_min, x_max, y_max]
+    
+    # Tracking
+    created_by = Column(String(100), nullable=False)
+    last_validated = Column(DateTime, nullable=True)
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('ix_schematics_filename', 'filename'),
+        Index('ix_schematics_format_type', 'format_type'),
+        Index('ix_schematics_upload_date', 'upload_date'),
+        Index('ix_schematics_created_by', 'created_by'),
+    )
+    
+    def to_schematic_data(self) -> SchematicData:
+        """Convert database model to SchematicData domain object."""
+        # Parse die boundaries
+        die_boundaries_data = json.loads(self.die_boundaries_json)
+        die_boundaries = []
+        for die_data in die_boundaries_data:
+            die_boundary = DieBoundary(
+                die_id=die_data['die_id'],
+                x_min=die_data['x_min'],
+                y_min=die_data['y_min'],
+                x_max=die_data['x_max'],
+                y_max=die_data['y_max'],
+                center_x=die_data['center_x'],
+                center_y=die_data['center_y'],
+                available=die_data.get('available', True),
+                metadata=die_data.get('metadata', {})
+            )
+            die_boundaries.append(die_boundary)
+        
+        # Parse metadata
+        metadata = None
+        if self.metadata_json:
+            metadata_data = json.loads(self.metadata_json)
+            metadata = SchematicMetadata(
+                original_filename=metadata_data['original_filename'],
+                file_size=metadata_data['file_size'],
+                creation_date=datetime.fromisoformat(metadata_data['creation_date']) if metadata_data.get('creation_date') else None,
+                software_info=metadata_data.get('software_info'),
+                units=metadata_data.get('units'),
+                scale_factor=metadata_data.get('scale_factor', 1.0),
+                layer_info=metadata_data.get('layer_info', {}),
+                custom_attributes=metadata_data.get('custom_attributes', {})
+            )
+        
+        return SchematicData(
+            id=self.id,
+            filename=self.filename,
+            format_type=SchematicFormat(self.format_type),
+            upload_date=self.upload_date,
+            die_boundaries=die_boundaries,
+            coordinate_system=CoordinateSystem(self.coordinate_system),
+            wafer_size=self.wafer_size,
+            metadata=metadata
+        )
+    
+    @classmethod
+    def from_schematic_data(cls, data: SchematicData, created_by: str) -> 'SchematicModel':
+        """Create database model from SchematicData domain object."""
+        # Serialize die boundaries
+        die_boundaries_data = []
+        for die in data.die_boundaries:
+            die_dict = {
+                'die_id': die.die_id,
+                'x_min': die.x_min,
+                'y_min': die.y_min,
+                'x_max': die.x_max,
+                'y_max': die.y_max,
+                'center_x': die.center_x,
+                'center_y': die.center_y,
+                'available': die.available,
+                'metadata': die.metadata
+            }
+            die_boundaries_data.append(die_dict)
+        
+        # Serialize metadata
+        metadata_json = None
+        if data.metadata:
+            metadata_dict = {
+                'original_filename': data.metadata.original_filename,
+                'file_size': data.metadata.file_size,
+                'creation_date': data.metadata.creation_date.isoformat() if data.metadata.creation_date else None,
+                'software_info': data.metadata.software_info,
+                'units': data.metadata.units,
+                'scale_factor': data.metadata.scale_factor,
+                'layer_info': data.metadata.layer_info,
+                'custom_attributes': data.metadata.custom_attributes
+            }
+            metadata_json = json.dumps(metadata_dict)
+        
+        # Serialize layout bounds
+        bounds = data.layout_bounds
+        layout_bounds_json = json.dumps([bounds[0], bounds[1], bounds[2], bounds[3]])
+        
+        return cls(
+            id=data.id,
+            filename=data.filename,
+            format_type=data.format_type.value,
+            upload_date=data.upload_date,
+            coordinate_system=data.coordinate_system.value,
+            wafer_size=data.wafer_size,
+            die_boundaries_json=json.dumps(die_boundaries_data),
+            metadata_json=metadata_json,
+            die_count=data.die_count,
+            available_die_count=data.available_die_count,
+            layout_bounds_json=layout_bounds_json,
+            created_by=created_by
+        )
+
+
+class SchematicValidationModel(Base):
+    """SQLAlchemy model for schematic validation results."""
+    __tablename__ = "schematic_validations"
+    
+    # Primary identification
+    validation_id = Column(String(36), primary_key=True)
+    schematic_id = Column(String(36), ForeignKey('schematics.id'), nullable=False)
+    strategy_id = Column(String(36), ForeignKey('strategies.id'), nullable=False)
+    validation_date = Column(DateTime, default=datetime.utcnow)
+    
+    # Validation results
+    validation_status = Column(String(20), nullable=False)
+    alignment_score = Column(Integer, default=0)  # Store as percentage (0-100)
+    coverage_percentage = Column(Integer, default=0)  # Store as percentage (0-100)
+    total_strategy_points = Column(Integer, default=0)
+    valid_strategy_points = Column(Integer, default=0)
+    
+    # Detailed results (stored as JSON)
+    conflicts_json = Column(Text, default="[]")
+    warnings_json = Column(Text, default="[]")
+    recommendations_json = Column(Text, default="[]")
+    
+    # Tracking
+    validated_by = Column(String(100), nullable=False)
+    
+    # Relationships
+    schematic = relationship("SchematicModel", backref="validations")
+    strategy = relationship("StrategyModel", backref="schematic_validations")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('ix_schematic_validations_schematic_id', 'schematic_id'),
+        Index('ix_schematic_validations_strategy_id', 'strategy_id'),
+        Index('ix_schematic_validations_validation_date', 'validation_date'),
+        Index('ix_schematic_validations_status', 'validation_status'),
+    )
+    
+    def to_validation_result(self) -> SchematicValidationResult:
+        """Convert database model to SchematicValidationResult domain object."""
+        from ..models.schematic import ValidationConflict, ValidationWarning
+        
+        # Parse conflicts
+        conflicts_data = json.loads(self.conflicts_json)
+        conflicts = []
+        for conflict_data in conflicts_data:
+            conflict = ValidationConflict(
+                conflict_type=conflict_data['conflict_type'],
+                strategy_point=tuple(conflict_data['strategy_point']),
+                description=conflict_data['description'],
+                severity=conflict_data['severity'],
+                recommendation=conflict_data.get('recommendation'),
+                affected_die_id=conflict_data.get('affected_die_id')
+            )
+            conflicts.append(conflict)
+        
+        # Parse warnings
+        warnings_data = json.loads(self.warnings_json)
+        warnings = []
+        for warning_data in warnings_data:
+            warning = ValidationWarning(
+                warning_type=warning_data['warning_type'],
+                description=warning_data['description'],
+                affected_area=tuple(warning_data['affected_area']) if warning_data.get('affected_area') else None,
+                recommendation=warning_data.get('recommendation')
+            )
+            warnings.append(warning)
+        
+        # Parse recommendations
+        recommendations = json.loads(self.recommendations_json)
+        
+        return SchematicValidationResult(
+            validation_id=self.validation_id,
+            schematic_id=self.schematic_id,
+            strategy_id=self.strategy_id,
+            validation_date=self.validation_date,
+            validation_status=ValidationStatus(self.validation_status),
+            conflicts=conflicts,
+            warnings=warnings,
+            alignment_score=self.alignment_score / 100.0,  # Convert back to 0.0-1.0
+            coverage_percentage=self.coverage_percentage,
+            total_strategy_points=self.total_strategy_points,
+            valid_strategy_points=self.valid_strategy_points,
+            recommendations=recommendations
+        )
+    
+    @classmethod
+    def from_validation_result(cls, result: SchematicValidationResult, validated_by: str) -> 'SchematicValidationModel':
+        """Create database model from SchematicValidationResult domain object."""
+        # Serialize conflicts
+        conflicts_data = []
+        for conflict in result.conflicts:
+            conflict_dict = {
+                'conflict_type': conflict.conflict_type,
+                'strategy_point': list(conflict.strategy_point),
+                'description': conflict.description,
+                'severity': conflict.severity,
+                'recommendation': conflict.recommendation,
+                'affected_die_id': conflict.affected_die_id
+            }
+            conflicts_data.append(conflict_dict)
+        
+        # Serialize warnings
+        warnings_data = []
+        for warning in result.warnings:
+            warning_dict = {
+                'warning_type': warning.warning_type,
+                'description': warning.description,
+                'affected_area': list(warning.affected_area) if warning.affected_area else None,
+                'recommendation': warning.recommendation
+            }
+            warnings_data.append(warning_dict)
+        
+        return cls(
+            validation_id=result.validation_id,
+            schematic_id=result.schematic_id,
+            strategy_id=result.strategy_id,
+            validation_date=result.validation_date,
+            validation_status=result.validation_status.value,
+            alignment_score=int(result.alignment_score * 100),  # Convert to percentage
+            coverage_percentage=int(result.coverage_percentage),
+            total_strategy_points=result.total_strategy_points,
+            valid_strategy_points=result.valid_strategy_points,
+            conflicts_json=json.dumps(conflicts_data),
+            warnings_json=json.dumps(warnings_data),
+            recommendations_json=json.dumps(result.recommendations),
+            validated_by=validated_by
+        )
 
 
 # Global database manager instance

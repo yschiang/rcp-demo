@@ -134,11 +134,24 @@ export default function StrategyWizard() {
 
     try {
       const strategy = await createStrategy(builderState.form_data);
-      toast.success('Strategy created successfully!');
+      toast.success(`Strategy "${strategy.name}" created successfully!`);
       resetBuilder();
-      navigate(`/strategies/${strategy.id}`);
-    } catch (error) {
-      toast.error('Failed to create strategy');
+      navigate('/strategies'); // Navigate to strategy list instead of non-existent detail view
+    } catch (error: any) {
+      console.error('Strategy creation failed:', error);
+      
+      // Enhanced error handling with specific messages
+      if (error.message) {
+        toast.error(`Failed to create strategy: ${error.message}`);
+      } else if (error.response?.status === 400) {
+        toast.error('Invalid strategy data. Please check your inputs and try again.');
+      } else if (error.response?.status === 409) {
+        toast.error('A strategy with this name already exists. Please choose a different name.');
+      } else if (error.response?.status >= 500) {
+        toast.error('Server error. Please try again later or contact support.');
+      } else {
+        toast.error('Failed to create strategy. Please try again.');
+      }
     }
   };
 
@@ -299,7 +312,17 @@ export default function StrategyWizard() {
                         }
                       `}
                     >
-                      {builderState.is_saving ? 'Creating...' : 'Create Strategy'}
+                      {builderState.is_saving ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Strategy'
+                      )}
                     </button>
                   ) : (
                     <button

@@ -143,6 +143,7 @@ export const useStrategyStore = create<StrategyStore>()(
         }));
         
         try {
+          // Phase 1: Create basic strategy
           const strategy = await strategyApi.create({
             name: data.name,
             description: data.description,
@@ -151,6 +152,16 @@ export const useStrategyStore = create<StrategyStore>()(
             strategy_type: data.strategy_type,
             author: data.author
           });
+          
+          // Phase 2: Update with complete configuration if available
+          const hasAdvancedConfig = data.rules?.length || data.conditions || data.transformations;
+          if (hasAdvancedConfig) {
+            await strategyApi.update(strategy.id, {
+              rules: data.rules,
+              conditions: data.conditions,
+              transformations: data.transformations
+            });
+          }
           
           // Reload strategies list
           await get().loadStrategies(get().filters);
@@ -161,11 +172,12 @@ export const useStrategyStore = create<StrategyStore>()(
           
           return strategy;
         } catch (error: any) {
+          const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to create strategy';
           set((state) => ({
-            error: error.response?.data?.detail || 'Failed to create strategy',
+            error: errorMessage,
             builderState: { ...state.builderState, is_saving: false }
           }));
-          throw error;
+          throw new Error(errorMessage);
         }
       },
 

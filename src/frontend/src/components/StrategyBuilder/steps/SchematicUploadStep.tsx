@@ -9,6 +9,7 @@ import FilePreview, { SchematicPreview } from '../../SchematicUpload/FilePreview
 import { showError, showSuccess } from '../../../services/toastService';
 import { useSchematicStore } from '../../../stores/schematicStore';
 import { StrategyFormData } from '../../../types/strategy';
+import { schematicApi } from '../../../services/schematicApi';
 
 interface SchematicUploadStepProps {
   formData: Partial<StrategyFormData>;
@@ -44,61 +45,6 @@ export default function SchematicUploadStep({
     return `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  // Mock API calls - replace with actual API integration
-  const uploadFile = async (file: File): Promise<{ id: string; url: string }> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          id: generateFileId(),
-          url: `/api/v1/schematics/${file.name}`
-        });
-      }, 1000 + Math.random() * 2000); // Simulate 1-3 second upload
-    });
-  };
-
-  const parseSchematic = async (fileId: string, file: File): Promise<SchematicPreview> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Mock parsed schematic data based on file type
-        const formatType = file.name.toLowerCase().includes('.gds') ? 'GDSII' :
-                          file.name.toLowerCase().includes('.dxf') ? 'DXF' :
-                          file.name.toLowerCase().includes('.svg') ? 'SVG' : 'Unknown';
-
-        const mockPreview: SchematicPreview = {
-          id: fileId,
-          filename: file.name,
-          fileSize: file.size,
-          formatType,
-          uploadDate: new Date().toISOString(),
-          dieCount: 2847, // Mock values based on typical wafer
-          availableDieCount: 2685,
-          waferSize: '300mm',
-          layoutBounds: {
-            width: 150000, // 150mm in micrometers
-            height: 150000,
-            xMin: -75000,
-            yMin: -75000,
-            xMax: 75000,
-            yMax: 75000
-          },
-          coordinateSystem: 'center-origin',
-          metadata: {
-            softwareInfo: formatType === 'GDSII' ? 'Cadence Virtuoso' : 
-                         formatType === 'DXF' ? 'AutoCAD 2023' : 'Inkscape 1.2',
-            units: 'micrometers',
-            layerInfo: formatType === 'GDSII' ? {
-              '0/0': 'DIE_BOUNDARY',
-              '1/0': 'METAL1',
-              '2/0': 'METAL2'
-            } : undefined
-          }
-        };
-
-        resolve(mockPreview);
-      }, 2000 + Math.random() * 3000); // Simulate 2-5 second parsing
-    });
-  };
-
   // Handle file selection from upload zone
   const handleFilesSelected = useCallback(async (files: File[]) => {
     const newUploadedFiles: UploadedFile[] = files.map(file => ({
@@ -118,34 +64,31 @@ export default function SchematicUploadStep({
         // Update status to uploading
         updateUploadFile(uploadedFile.id, { status: 'uploading' });
 
-        // Simulate upload progress
-        const progressInterval = setInterval(() => {
-          const currentFile = uploadState.files.find(f => f.id === uploadedFile.id);
-          if (currentFile && currentFile.status === 'uploading') {
-            const newProgress = Math.min(currentFile.progress + 10 + Math.random() * 20, 95);
-            updateUploadFile(uploadedFile.id, { progress: newProgress });
+        // Upload file with real API
+        const schematicPreview = await schematicApi.upload(
+          uploadedFile,
+          formData.author || 'user',
+          (progress) => {
+            // Update progress in real-time
+            updateUploadFile(uploadedFile.id, { 
+              progress: progress.percentage,
+              status: 'uploading'
+            });
           }
-        }, 200);
-
-        // Upload file
-        const uploadResult = await uploadFile(uploadedFile);
-        clearInterval(progressInterval);
-
-        // Update to parsing status
-        updateUploadFile(uploadedFile.id, { status: 'parsing', progress: 100 });
-
-        // Parse schematic
-        const preview = await parseSchematic(uploadResult.id, uploadedFile);
+        );
 
         // Update to completed status
-        updateUploadFile(uploadedFile.id, { status: 'completed' });
+        updateUploadFile(uploadedFile.id, { 
+          status: 'completed',
+          progress: 100
+        });
 
         // Add to schematic store
-        addSchematic(preview);
+        addSchematic(schematicPreview);
         
         // Notify parent component
         if (onSchematicUploaded) {
-          onSchematicUploaded(preview);
+          onSchematicUploaded(schematicPreview);
         }
 
         showSuccess(`Successfully uploaded and parsed ${uploadedFile.name}`);
@@ -159,12 +102,12 @@ export default function SchematicUploadStep({
         });
         setUploadError(uploadedFile.id, errorMessage);
         
-        showError(`Failed to upload ${uploadedFile.name}`);
+        showError(`Failed to upload ${uploadedFile.name}: ${errorMessage}`);
       }
     }
 
     setIsProcessing(false);
-  }, [addUploadFile, updateUploadFile, addSchematic, setUploadError, onSchematicUploaded, uploadState.files]);
+  }, [addUploadFile, updateUploadFile, addSchematic, setUploadError, onSchematicUploaded, formData.author]);
 
   // Handle file actions
   const handleCancelUpload = useCallback((fileId: string) => {
@@ -186,14 +129,53 @@ export default function SchematicUploadStep({
 
     // Reset file status and retry
     updateUploadFile(fileId, { 
-      status: 'pending',
+      status: 'uploading',
       progress: 0,
       error: undefined 
     });
 
-    // Trigger upload for this specific file
-    await handleFilesSelected([fileToRetry]);
-  }, [uploadState.files, updateUploadFile, handleFilesSelected]);
+    try {
+      // Upload file with real API
+      const schematicPreview = await schematicApi.upload(
+        fileToRetry,
+        formData.author || 'user',
+        (progress) => {
+          // Update progress in real-time
+          updateUploadFile(fileId, { 
+            progress: progress.percentage,
+            status: 'uploading'
+          });
+        }
+      );
+
+      // Update to completed status
+      updateUploadFile(fileId, { 
+        status: 'completed',
+        progress: 100
+      });
+
+      // Add to schematic store
+      addSchematic(schematicPreview);
+      
+      // Notify parent component
+      if (onSchematicUploaded) {
+        onSchematicUploaded(schematicPreview);
+      }
+
+      showSuccess(`Successfully uploaded and parsed ${fileToRetry.name}`);
+
+    } catch (error) {
+      // Update to error status
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      updateUploadFile(fileId, { 
+        status: 'error',
+        error: errorMessage 
+      });
+      setUploadError(fileId, errorMessage);
+      
+      showError(`Failed to retry upload ${fileToRetry.name}: ${errorMessage}`);
+    }
+  }, [uploadState.files, updateUploadFile, addSchematic, setUploadError, onSchematicUploaded, formData.author]);
 
   const handleRemovePreview = useCallback((previewId: string) => {
     removeSchematic(previewId);
